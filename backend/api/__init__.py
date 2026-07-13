@@ -3,6 +3,8 @@
 Centralises extension binding, blueprint registration and cross-cutting
 middleware so each feature remains a thin, independently testable module.
 """
+import logging
+
 from flask import Flask
 
 from config import get_config
@@ -29,7 +31,18 @@ def _init_extensions(app: Flask) -> None:
     cors.init_app(app, origins=app.config["CORS_ORIGINS"])
 
     global redis_client
-    redis_client = __import__("redis").from_url(app.config["REDIS_URL"], decode_responses=True)
+    try:
+        redis_client = __import__("redis").from_url(
+            app.config["REDIS_URL"], decode_responses=True
+        )
+        redis_client.ping()
+    except Exception as exc:  # pragma: no cover - depends on infra
+        redis_client = None
+        logging.getLogger(__name__).warning(
+            "Redis indisponível (%s). Rodando em modo degradado: revogação de "
+            "token (logout) e reset de senha ficam desabilitados.",
+            exc,
+        )
 
 
 def _register_blueprints(app: Flask) -> None:

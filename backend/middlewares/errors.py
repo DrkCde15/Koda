@@ -3,11 +3,15 @@
 Centralises error formatting so the whole API honours the standard error
 envelope regardless of where the failure originates.
 """
+import logging
+
 from flask import Blueprint, jsonify
 from marshmallow import ValidationError
 from werkzeug.exceptions import HTTPException
 
 from middlewares.responses import error
+
+logger = logging.getLogger(__name__)
 
 errors_bp = Blueprint("errors", __name__)
 
@@ -26,4 +30,5 @@ def handle_http_error(err: HTTPException):
 @errors_bp.app_errorhandler(Exception)
 def handle_unexpected_error(err: Exception):
     # Avoid leaking internal details in production; log server-side instead.
+    logger.exception("Unhandled exception: %s", err)
     return error("Internal server error", None, 500)

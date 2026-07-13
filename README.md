@@ -107,6 +107,21 @@ createdb koda  # ou: createuser -s koda; createdb koda
 > Observação: o Redis do Koda usa a porta `6379` localmente. Se essa porta já
 > estiver ocupada por outro processo, ajuste `REDIS_URL` abaixo.
 
+### Redis é opcional (modo degradado)
+
+O Redis é usado para revogação de token (logout) e recuperação de senha.
+Se ele não estiver disponível no startup, o backend sobe normalmente em
+**modo degradado**:
+
+- `revogação de token / logout` fica desabilitada (tokens permanecem válidos
+  até expirar);
+- `recuperação de senha` fica desabilitada;
+- todo o resto (auth, workspaces, páginas, blocos, busca, arquivos) funciona
+  normalmente.
+
+Basta não informar/iniciar o Redis ou apontar `REDIS_URL` para um serviço
+inexistente. Um aviso é logado no startup indicando o modo degradado.
+
 ### 2. Backend
 ```bash
 cd backend
