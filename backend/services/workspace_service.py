@@ -1,11 +1,14 @@
 """Workspace business logic."""
 import secrets
 
+from flask import current_app
+
 from extensions import db
 from models.user import Role
 from models.workspace_models import Invite
 from repositories.user_repository import UserRepository
 from repositories.workspace_repository import WorkspaceRepository
+from services.email_service import send_email
 from services.exceptions import ConflictError, ForbiddenError, NotFoundError, ServiceError
 
 
@@ -56,6 +59,18 @@ class WorkspaceService:
             raise NotFoundError("Workspace not found")
         token = secrets.token_urlsafe(32)
         invite = WorkspaceRepository.create_invite(workspace_id, email, role, token)
+        frontend_url = current_app.config.get("FRONTEND_URL", "http://localhost")
+        invite_link = f"{frontend_url.rstrip('/')}/register?token={token}"
+        send_email(
+            to=email,
+            subject=f"Convite para o workspace {ws.name} no Koda",
+            html=(
+                f"<p>Você foi convidado(a) para o workspace <strong>{ws.name}</strong> "
+                f"com a função <strong>{role}</strong>.</p>"
+                f'<p><a href="{invite_link}">{invite_link}</a></p>'
+            ),
+            text=f"Você foi convidado para o workspace {ws.name}: {invite_link}",
+        )
         return invite.to_dict()
 
     @staticmethod

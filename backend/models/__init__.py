@@ -8,6 +8,12 @@ from models.workspace_models import Invite, Workspace, WorkspaceMember
 from models.page import Page, PageRevision
 from models.block import Block, BlockType
 from models.file import File
+from models.database_models import (
+    Database,
+    DatabaseItem,
+    DatabaseItemValue,
+    DatabaseProperty,
+)
 
 __all__ = [
     "Role",
@@ -20,4 +26,8 @@ __all__ = [
     "Block",
     "BlockType",
     "File",
+    "Database",
+    "DatabaseProperty",
+    "DatabaseItem",
+    "DatabaseItemValue",
 ]

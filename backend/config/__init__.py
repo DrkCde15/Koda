@@ -31,6 +31,16 @@ class BaseConfig:
 
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+    # Transactional email via a Google Apps Script web app that sends mail
+    # using GmailApp. When GOOGLE_SCRIPT_URL is unset, email sending is
+    # skipped (degraded mode) so the app still works without email.
+    GOOGLE_SCRIPT_URL = os.getenv("GOOGLE_SCRIPT_URL")
+    GOOGLE_SCRIPT_SECRET = os.getenv("GOOGLE_SCRIPT_SECRET")
+    EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER")
+    MAIL_FROM = os.getenv("EMAIL_REMETENTE", "no-reply@koda.app")
+    MAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Koda")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost")
+
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(10 * 1024 * 1024)))
 

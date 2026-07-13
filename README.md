@@ -169,6 +169,7 @@ cd backend && pytest
 - Alteração e recuperação de senha
 - Perfil do usuário
 - Proteção de rotas (frontend e backend)
+- **E-mail transacional real** para convites e recuperação de senha (via Google Apps Script)
 
 ### Workspaces
 - Criar / editar / excluir
@@ -185,7 +186,13 @@ cd backend && pytest
 
 ### Blocos (estrutura do editor)
 - Blocos tipados (parágrafo, títulos, listas, citação, código, etc.)
-- Aninháveis, prontos para o editor rico futuro
+- Aninháveis
+- Editor rich-text (TipTap) que consome/gera os blocos da API
+
+### Bancos de dados e Tarefas
+- Bancos de dados relacionais por workspace (propriedades tipadas)
+- Itens (linhas) com valores por propriedade
+- Preset de Tarefas (título, status, data, responsável)
 
 ### Arquivos
 - Upload com validação de tipo/tamanho e metadados persistidos
@@ -194,8 +201,23 @@ cd backend && pytest
 ### Busca
 - Busca de páginas por título/conteúdo dentro de um workspace
 
+## E-mail transacional (Google Apps Script)
+
+O backend envia e-mails reais de convite e recuperação de senha via um Google
+Apps Script publicado como web app (usa `MailApp`/`GmailApp`). Configure no `.env`:
+
+```bash
+EMAIL_PROVIDER=google_script
+GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/SEU_ID/exec
+GOOGLE_SCRIPT_SECRET=seu_segredo
+EMAIL_REMETENTE=no-reply@koda.app
+EMAIL_FROM_NAME=Koda
+FRONTEND_URL=http://localhost   # base dos links de reset/convite
+```
+
+O payload POSTado é JSON: `{ secret, to, subject, html, text, fromEmail, fromName }`.
+Se `GOOGLE_SCRIPT_URL` estiver vazio, o app roda em **modo degradado** (o e-mail é
+ignorado com um aviso no log, sem quebrar o fluxo).
+
 ## Próximos passos (roadmap)
-- Editor rich-text completo consumindo a estrutura de blocos
-- Tarefas e bancos de dados relacionais
 - Recursos de Inteligência Artificial (geração de conteúdo, resumo, busca semântica)
-- E-mail transacional real para convites/recuperação de senha

@@ -50,9 +50,9 @@ export function DashboardPage() {
       </form>
 
       {isLoading ? (
-        <p className="text-gray-500">Carregando…</p>
+        <p className="text-gray-500 dark:text-gray-300">Carregando…</p>
       ) : workspaces.length === 0 ? (
-        <p className="text-gray-500">Nenhum workspace ainda. Crie o primeiro acima.</p>
+        <p className="text-gray-500 dark:text-gray-300">Nenhum workspace ainda. Crie o primeiro acima.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {workspaces.map((ws) => (

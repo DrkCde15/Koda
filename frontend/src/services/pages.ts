@@ -68,6 +68,7 @@ export const blockService = {
     page_id: number;
     type: string;
     content?: Record<string, unknown>;
+    position?: number;
   }): Promise<Block> {
     const { data } = await api.post<ApiResponse<Block>>("/blocks", payload);
     return data.data as Block;

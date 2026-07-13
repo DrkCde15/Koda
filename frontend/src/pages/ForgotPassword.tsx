@@ -30,7 +30,7 @@ export function ForgotPasswordPage() {
     <AuthLayout>
       <h1 className="mb-4 text-lg font-semibold">Recuperar senha</h1>
       {sent ? (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           Verifique seu email para continuar. (Token de desenvolvimento retornado pela API pode
           ser usado na tela de redefinição.)
         </p>

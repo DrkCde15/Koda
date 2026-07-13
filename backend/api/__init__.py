@@ -53,6 +53,7 @@ def _register_blueprints(app: Flask) -> None:
     from api.blocks.blocks import blocks_bp
     from api.files.files import files_bp
     from api.search.search import search_bp
+    from api.databases.databases import databases_bp
 
     app.register_blueprint(errors_bp)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -62,6 +63,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(blocks_bp, url_prefix="/api/blocks")
     app.register_blueprint(files_bp, url_prefix="/api/files")
     app.register_blueprint(search_bp, url_prefix="/api/search")
+    app.register_blueprint(databases_bp, url_prefix="/api/databases")
 
 
 def _register_jwt_handlers() -> None:

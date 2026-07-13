@@ -6,11 +6,13 @@ Repositories handle persistence; this layer enforces rules and workflows.
 from typing import Optional, Tuple
 
 import jwt as pyjwt
+from flask import current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 from extensions import redis_client
 from models.user import User
 from repositories.user_repository import UserRepository
+from services.email_service import send_email
 
 RESET_TTL_SECONDS = 3600
 
@@ -62,6 +64,20 @@ class AuthService:
         )
         if redis_client is not None:
             redis_client.setex(f"reset:{token}", RESET_TTL_SECONDS, str(user.id))
+        frontend_url = current_app.config.get("FRONTEND_URL", "http://localhost")
+        reset_link = f"{frontend_url.rstrip('/')}/reset-password?token={token}"
+        send_email(
+            to=user.email,
+            subject="Redefinir sua senha no Koda",
+            html=(
+                f"<p>Olá, {user.full_name or 'usuário'},</p>"
+                f"<p>Recebemos uma solicitação para redefinir sua senha. "
+                f"Clique no link abaixo (válido por 1 hora):</p>"
+                f'<p><a href="{reset_link}">{reset_link}</a></p>'
+                f"<p>Se não foi você, ignore este email.</p>"
+            ),
+            text=f"Redefina sua senha: {reset_link}",
+        )
         return token
 
     @staticmethod

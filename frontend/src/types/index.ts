@@ -69,6 +69,41 @@ export interface Block {
   updated_at?: string;
 }
 
+export type PropertyType = "text" | "number" | "select" | "date" | "status";
+
+export interface DatabaseProperty {
+  id: number;
+  database_id: number;
+  name: string;
+  type: PropertyType;
+  options: { choices?: string[] };
+  position: number;
+}
+
+export interface DatabaseItemValue {
+  property_id: number;
+  type: PropertyType;
+  value: string | number | null;
+}
+
+export interface DatabaseItem {
+  id: number;
+  database_id: number;
+  position: number;
+  created_at?: string;
+  values: Record<string, DatabaseItemValue>;
+}
+
+export interface Database {
+  id: number;
+  workspace_id: number;
+  name: string;
+  icon?: string | null;
+  created_at?: string;
+  properties: DatabaseProperty[];
+  items?: DatabaseItem[];
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;

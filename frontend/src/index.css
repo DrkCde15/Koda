@@ -10,12 +10,46 @@
     @apply btn bg-brand-600 text-white hover:bg-brand-700;
   }
   .btn-ghost {
-    @apply btn text-gray-600 hover:bg-gray-100;
+    @apply btn text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800;
   }
   .input {
-    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500;
+    @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100;
   }
   .card {
-    @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm;
+    @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800;
   }
+}
+
+.koda-editor {
+  @apply text-gray-900 dark:text-white;
+}
+.koda-editor:focus {
+  outline: none;
+}
+.koda-editor h1 {
+  @apply mb-2 mt-4 text-3xl font-bold;
+}
+.koda-editor h2 {
+  @apply mb-2 mt-3 text-2xl font-bold;
+}
+.koda-editor h3 {
+  @apply mb-2 mt-2 text-xl font-bold;
+}
+.koda-editor p {
+  @apply my-2 leading-relaxed;
+}
+.koda-editor ul {
+  @apply my-2 list-disc pl-6;
+}
+.koda-editor ol {
+  @apply my-2 list-decimal pl-6;
+}
+.koda-editor blockquote {
+  @apply my-2 border-l-4 border-gray-300 pl-4 text-gray-600 dark:border-gray-600 dark:text-gray-300;
+}
+.koda-editor pre {
+  @apply my-2 overflow-x-auto rounded bg-gray-900 p-3 font-mono text-sm text-gray-100;
+}
+.koda-editor hr {
+  @apply my-4 border-gray-300 dark:border-gray-700;
 }

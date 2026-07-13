@@ -21,3 +21,7 @@ class ForbiddenError(ServiceError):
 
 class ConflictError(ServiceError):
     code = 409
+
+
+class ValidationError(ServiceError):
+    code = 422

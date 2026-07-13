@@ -6,7 +6,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { ToastProvider } from "./contexts/ToastContext";
 import { queryClient } from "./lib/queryClient";
+import { useThemeStore } from "./store/themeStore";
 import "./index.css";
+
+useThemeStore.getState();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
