@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.db
+uploads/
+.env
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+*.log
+.env
+.env.local

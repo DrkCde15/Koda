@@ -1,0 +1,4 @@
+Flask-Migrate migration scripts.
+
+Generated and managed by ``flask db migrate`` / ``flask db upgrade``.
+Do not edit revision files by hand; edit models in ``models/`` and regenerate.

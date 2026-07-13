@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+.dev.db
+uploads
+.env
+.git
+tests
+*.md
