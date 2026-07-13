@@ -1,5 +1,9 @@
 # Koda
 
+<p align="center">
+  <img src="frontend/public/logo.png" alt="Koda" />
+</p>
+
 Uma plataforma de produtividade moderna inspirada na experiência do Notion: workspaces, páginas, blocos, tarefas, arquivos e busca, com fundamentos 
 prontos para recursos de Inteligência Artificial.
 
@@ -42,7 +46,13 @@ frontend/
     store/                       -> Zustand (auth)
     contexts/                    -> Toast (feedback)
     hooks/ types/ utils/ lib/    -> suporte
+  public/
+    logo.png                     -> logotipo da marca
 ```
+
+A logotipo (`public/logo.png`) é exibida no `AuthLayout` (telas de
+login/registro), no cabeçalho do `AppLayout` (sidebar) e como favicon na
+aba do navegador (`index.html`).
 
 Princípios aplicados: SOLID, DRY, KISS, Clean Code e Separation of Concerns.
 

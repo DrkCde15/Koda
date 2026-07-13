@@ -21,8 +21,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
       <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
-        <Link to="/" className="px-4 py-4 text-xl font-bold text-brand-600">
-          Koda
+        <Link to="/" className="flex items-center px-4 py-4">
+          <img src="/logo.png" alt="Koda" className="h-8 w-auto" />
         </Link>
         <nav className="flex-1 overflow-y-auto px-2">
           <p className="px-2 py-2 text-xs font-semibold uppercase text-gray-400">
