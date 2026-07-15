@@ -17,4 +17,15 @@ export default defineConfig({
             },
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ["react", "react-dom", "react-router-dom"],
+                    editor: ["@tiptap/react", "@tiptap/starter-kit"],
+                    query: ["@tanstack/react-query", "axios"],
+                },
+            },
+        },
+    },
 });

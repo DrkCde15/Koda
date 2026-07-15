@@ -3,8 +3,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Editor, useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { blockService } from "@/services/pages";
+import { blockService, pageService } from "@/services/pages";
+import { databaseService } from "@/services/databases";
+import { fileService } from "@/services/files";
 import { Block } from "@/types";
+import { useDialog } from "@/contexts/DialogContext";
+import { useToast } from "@/contexts/ToastContext";
+import { getErrorMessage } from "@/utils/error";
+import {
+  DatabaseNode,
+  EditorPageContext,
+  FileNode,
+  ImageNode,
+  SubpageNode,
+} from "@/components/editorNodes";
 
 type JsonNode = {
   type: string;
@@ -45,9 +57,37 @@ function listNode(type: "bulletList" | "orderedList", text: string): JsonNode {
 }
 
 function blockToNode(b: Block): JsonNode {
-  const text = ((b.content as { text?: string } | null)?.text as string) || "";
+  const c = (b.content || {}) as Record<string, unknown>;
+  const text = (c.text as string) || "";
   const textContent = text ? [{ type: "text", text }] : [];
   switch (b.type) {
+    case "subpage":
+      return {
+        type: "subpage",
+        attrs: {
+          pageId: (c.page_id as number) ?? null,
+          title: (c.title as string) || "",
+          icon: (c.icon as string) || "📄",
+        },
+      };
+    case "database":
+      return {
+        type: "dbtable",
+        attrs: {
+          databaseId: (c.database_id as number) ?? null,
+          name: (c.name as string) || "",
+          icon: (c.icon as string) || "🗃️",
+        },
+      };
+    case "file":
+      return {
+        type: "fileref",
+        attrs: {
+          fileId: (c.file_id as number) ?? null,
+          name: (c.name as string) || "",
+          filename: (c.filename as string) || "",
+        },
+      };
     case "paragraph":
       return { type: "paragraph", content: textContent };
     case "heading_1":
@@ -68,14 +108,58 @@ function blockToNode(b: Block): JsonNode {
     case "divider":
       return { type: "horizontalRule" };
     case "image":
-      return { type: "paragraph", content: textContent };
+      return {
+        type: "image",
+        attrs: {
+          fileId: (c.file_id as number) ?? null,
+          name: (c.name as string) || "",
+          filename: (c.filename as string) || "",
+        },
+      };
     default:
       return { type: "paragraph", content: textContent };
   }
 }
 
 function nodeToBlock(node: JsonNode): { type: string; content: Record<string, unknown> } {
+  const attrs = node.attrs || {};
   switch (node.type) {
+    case "subpage":
+      return {
+        type: "subpage",
+        content: {
+          page_id: attrs.pageId ?? null,
+          title: attrs.title ?? "",
+          icon: attrs.icon ?? "📄",
+        },
+      };
+    case "dbtable":
+      return {
+        type: "database",
+        content: {
+          database_id: attrs.databaseId ?? null,
+          name: attrs.name ?? "",
+          icon: attrs.icon ?? "🗃️",
+        },
+      };
+    case "fileref":
+      return {
+        type: "file",
+        content: {
+          file_id: attrs.fileId ?? null,
+          name: attrs.name ?? "",
+          filename: attrs.filename ?? "",
+        },
+      };
+    case "image":
+      return {
+        type: "image",
+        content: {
+          file_id: attrs.fileId ?? null,
+          name: attrs.name ?? "",
+          filename: attrs.filename ?? "",
+        },
+      };
     case "heading":
       return {
         type: `heading_${((node.attrs?.level as number) || 1)}`,
@@ -104,8 +188,20 @@ function debounce(fn: () => void, ms: number): () => void {
   };
 }
 
-export function BlockEditor({ pageId, initialBlocks }: { pageId: number; initialBlocks: Block[] }) {
+export function BlockEditor({
+  pageId,
+  workspaceId,
+  initialBlocks,
+}: {
+  pageId: number;
+  workspaceId: number;
+  initialBlocks: Block[];
+}) {
   const queryClient = useQueryClient();
+  const dialog = useDialog();
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadImageRef = useRef<(file: File) => void>(() => {});
   const applyingInitial = useRef(false);
   const blocksRef = useRef<Block[]>(initialBlocks);
   blocksRef.current = initialBlocks;
@@ -154,11 +250,21 @@ export function BlockEditor({ pageId, initialBlocks }: { pageId: number; initial
   );
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, SubpageNode, DatabaseNode, FileNode, ImageNode],
     content: "",
     editorProps: {
       attributes: {
         class: "koda-editor prose dark:prose-invert focus:outline-none",
+      },
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files || []);
+        const image = files.find((f) => f.type.startsWith("image/"));
+        if (image) {
+          event.preventDefault();
+          uploadImageRef.current(image);
+          return true;
+        }
+        return false;
       },
     },
     onUpdate: () => {
@@ -181,8 +287,147 @@ export function BlockEditor({ pageId, initialBlocks }: { pageId: number; initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
+  function appendBlock(node: Record<string, unknown>) {
+    if (!editor) return;
+    const doc = editor.state.doc;
+    const last = doc.lastChild;
+    const hasTrailingParagraph =
+      !!last && last.type.name === "paragraph" && last.content.size === 0;
+    if (hasTrailingParagraph) {
+      const pos = doc.content.size - last!.nodeSize;
+      editor.chain().focus().insertContentAt(pos, node).run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(doc.content.size, [node, { type: "paragraph" }])
+        .run();
+    }
+  }
+
+  async function insertSubpage() {
+    const result = await dialog.prompt({
+      title: "Nova subpágina",
+      confirmLabel: "Criar",
+      fields: [
+        { name: "title", label: "Nome da subpágina", defaultValue: "Sem título", required: true },
+        { name: "icon", label: "Ícone (emoji)", defaultValue: "📄" },
+      ],
+    });
+    if (!result) return;
+    try {
+      const page = await pageService.create(workspaceId, {
+        title: result.title.trim() || "Sem título",
+        icon: result.icon || undefined,
+        parent_id: pageId,
+      });
+      appendBlock({
+        type: "subpage",
+        attrs: { pageId: page.id, title: page.title, icon: page.icon || "📄" },
+      });
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+    }
+  }
+
+  async function insertTable() {
+    let databases = [];
+    try {
+      databases = await databaseService.list(workspaceId);
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+      return;
+    }
+    const NEW = "__new__";
+    const result = await dialog.prompt({
+      title: "Inserir tabela",
+      confirmLabel: "Inserir",
+      fields: [
+        {
+          name: "db",
+          label: "Tabela",
+          type: "select",
+          required: true,
+          defaultValue: databases[0] ? String(databases[0].id) : NEW,
+          options: [
+            ...databases.map((d) => ({ label: `${d.icon || "🗃️"} ${d.name}`, value: String(d.id) })),
+            { label: "➕ Nova tabela…", value: NEW },
+          ],
+        },
+      ],
+    });
+    if (!result?.db) return;
+    try {
+      let db;
+      if (result.db === NEW) {
+        const nameRes = await dialog.prompt({
+          title: "Nova tabela",
+          confirmLabel: "Criar",
+          fields: [{ name: "name", label: "Nome da tabela", defaultValue: "Nova tabela", required: true }],
+        });
+        if (!nameRes?.name) return;
+        db = await databaseService.create({
+          workspace_id: workspaceId,
+          name: nameRes.name,
+          icon: "🗃️",
+        });
+      } else {
+        db = databases.find((d) => String(d.id) === result.db);
+      }
+      if (!db) return;
+      appendBlock({
+        type: "dbtable",
+        attrs: { databaseId: db.id, name: db.name, icon: db.icon || "🗃️" },
+      });
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+    }
+  }
+
+  async function insertImage(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.push("O arquivo selecionado não é uma imagem", "error");
+      return;
+    }
+    try {
+      const uploaded = await fileService.upload(workspaceId, file);
+      appendBlock({
+        type: "image",
+        attrs: {
+          fileId: uploaded.id,
+          name: uploaded.original_name,
+          filename: uploaded.filename,
+        },
+      });
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+    }
+  }
+  uploadImageRef.current = insertImage;
+
+  async function handleFilePicked(file: File) {
+    if (file.type.startsWith("image/")) {
+      insertImage(file);
+      return;
+    }
+    try {
+      const uploaded = await fileService.upload(workspaceId, file);
+      appendBlock({
+        type: "fileref",
+        attrs: {
+          fileId: uploaded.id,
+          name: uploaded.original_name,
+          filename: uploaded.filename,
+        },
+      });
+      toast.push("Arquivo anexado", "success");
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+    }
+  }
+
   return (
-    <div>
+    <EditorPageContext.Provider value={{ workspaceId, pageId }}>
       <div className="mb-2 flex flex-wrap gap-1 border-b border-gray-200 pb-2 dark:border-gray-700">
         <ToolbarButton label="B" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} />
         <ToolbarButton label="I" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} />
@@ -194,9 +439,23 @@ export function BlockEditor({ pageId, initialBlocks }: { pageId: number; initial
         <ToolbarButton label="❝ Citação" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
         <ToolbarButton label="</> Código" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive("codeBlock")} />
         <ToolbarButton label="― Divisor" onClick={() => editor?.chain().focus().setHorizontalRule().run()} />
+        <span className="mx-1 w-px self-stretch bg-gray-200 dark:bg-gray-700" />
+        <ToolbarButton label="📄 Subpágina" onClick={insertSubpage} />
+        <ToolbarButton label="🗃️ Tabela" onClick={insertTable} />
+        <ToolbarButton label="📎 Arquivo/Imagem" onClick={() => fileInputRef.current?.click()} />
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFilePicked(f);
+          e.target.value = "";
+        }}
+      />
       <EditorContent editor={editor} />
-    </div>
+    </EditorPageContext.Provider>
   );
 }
 

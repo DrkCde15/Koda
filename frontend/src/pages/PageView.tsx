@@ -44,7 +44,20 @@ export function PageViewPage() {
   return (
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-3xl">{page.icon || "📄"}</span>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-ghost"
+            title="Voltar"
+            onClick={() =>
+              page.parent_id
+                ? navigate(`/pages/${page.parent_id}`)
+                : navigate(`/workspaces/${page.workspace_id}`)
+            }
+          >
+            ← Voltar
+          </button>
+          <span className="text-3xl">{page.icon || "📄"}</span>
+        </div>
         <div className="flex gap-2">
           <button
             className="btn-ghost"
@@ -62,11 +75,17 @@ export function PageViewPage() {
         className="mb-6 w-full border-none bg-transparent text-3xl font-bold text-gray-900 outline-none dark:bg-transparent dark:text-white"
         defaultValue={page.title}
         onBlur={(e) => {
-          if (e.target.value !== page.title) updatePage.mutate({ title: e.target.value });
+          const next = e.target.value.trim() || "Sem título";
+          if (next !== e.target.value) e.target.value = next;
+          if (next !== page.title) updatePage.mutate({ title: next });
         }}
       />
 
-      <BlockEditor pageId={pageId} initialBlocks={blocks as Block[]} />
+      <BlockEditor
+        pageId={pageId}
+        workspaceId={page.workspace_id}
+        initialBlocks={blocks as Block[]}
+      />
     </div>
   );
 }

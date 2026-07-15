@@ -20,6 +20,9 @@ class BlockType:
     DIVIDER = "divider"
     IMAGE = "image"
     CALLOUT = "callout"
+    SUBPAGE = "subpage"
+    DATABASE = "database"
+    FILE = "file"
 
     @classmethod
     def values(cls) -> list[str]:
@@ -35,6 +38,9 @@ class BlockType:
             cls.DIVIDER,
             cls.IMAGE,
             cls.CALLOUT,
+            cls.SUBPAGE,
+            cls.DATABASE,
+            cls.FILE,
         ]
 
 

@@ -1,9 +1,14 @@
-"""Database HTTP controllers."""
+"""Database HTTP controllers.
+
+Thin layer: validates input, delegates to the service and returns the standard
+envelope. Domain errors raised by the service are translated by the global
+error handler in ``middlewares/errors.py``.
+"""
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
 from middlewares.auth import get_current_user
-from middlewares.responses import error, success
+from middlewares.responses import success
 from services.database_service import (
     add_item,
     add_property,
@@ -26,10 +31,7 @@ databases_bp = Blueprint("databases", __name__, url_prefix="/databases")
 def create():
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        database = create_database(user.id, payload)
-    except Exception as exc:  # noqa: BLE001 - normalized downstream
-        return error("Could not create database", str(exc), 400)
+    database = create_database(user.id, payload)
     return success("Database created", database, 201)
 
 
@@ -37,10 +39,7 @@ def create():
 @jwt_required()
 def list_for_workspace(workspace_id: int):
     user = get_current_user()
-    try:
-        databases = list_databases(user.id, workspace_id)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not list databases", str(exc), 403)
+    databases = list_databases(user.id, workspace_id)
     return success("Databases retrieved", databases)
 
 
@@ -48,10 +47,7 @@ def list_for_workspace(workspace_id: int):
 @jwt_required()
 def get_one(database_id: int):
     user = get_current_user()
-    try:
-        database = get_database(user.id, database_id)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not retrieve database", str(exc), 404)
+    database = get_database(user.id, database_id)
     return success("Database retrieved", database)
 
 
@@ -60,10 +56,7 @@ def get_one(database_id: int):
 def update(database_id: int):
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        database = update_database(user.id, database_id, payload)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not update database", str(exc), 400)
+    database = update_database(user.id, database_id, payload)
     return success("Database updated", database)
 
 
@@ -71,10 +64,7 @@ def update(database_id: int):
 @jwt_required()
 def delete(database_id: int):
     user = get_current_user()
-    try:
-        delete_database(user.id, database_id)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not delete database", str(exc), 400)
+    delete_database(user.id, database_id)
     return success("Database deleted", None)
 
 
@@ -83,10 +73,7 @@ def delete(database_id: int):
 def create_property(database_id: int):
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        prop = add_property(user.id, database_id, payload)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not add property", str(exc), 400)
+    prop = add_property(user.id, database_id, payload)
     return success("Property added", prop, 201)
 
 
@@ -95,10 +82,7 @@ def create_property(database_id: int):
 def edit_property(database_id: int, prop_id: int):
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        prop = update_property(user.id, database_id, prop_id, payload)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not update property", str(exc), 400)
+    prop = update_property(user.id, database_id, prop_id, payload)
     return success("Property updated", prop)
 
 
@@ -106,10 +90,7 @@ def edit_property(database_id: int, prop_id: int):
 @jwt_required()
 def remove_property(database_id: int, prop_id: int):
     user = get_current_user()
-    try:
-        delete_property(user.id, database_id, prop_id)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not delete property", str(exc), 400)
+    delete_property(user.id, database_id, prop_id)
     return success("Property deleted", None)
 
 
@@ -118,10 +99,7 @@ def remove_property(database_id: int, prop_id: int):
 def create_item(database_id: int):
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        item = add_item(user.id, database_id, payload)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not add item", str(exc), 400)
+    item = add_item(user.id, database_id, payload)
     return success("Item added", item, 201)
 
 
@@ -130,10 +108,7 @@ def create_item(database_id: int):
 def edit_item(database_id: int, item_id: int):
     user = get_current_user()
     payload = request.get_json(force=True, silent=True) or {}
-    try:
-        item = update_item(user.id, database_id, item_id, payload)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not update item", str(exc), 400)
+    item = update_item(user.id, database_id, item_id, payload)
     return success("Item updated", item)
 
 
@@ -141,8 +116,5 @@ def edit_item(database_id: int, item_id: int):
 @jwt_required()
 def remove_item(database_id: int, item_id: int):
     user = get_current_user()
-    try:
-        delete_item(user.id, database_id, item_id)
-    except Exception as exc:  # noqa: BLE001
-        return error("Could not delete item", str(exc), 400)
+    delete_item(user.id, database_id, item_id)
     return success("Item deleted", None)

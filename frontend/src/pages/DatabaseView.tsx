@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { databaseService } from "@/services/databases";
 import { Database, DatabaseItem, DatabaseProperty, PropertyType } from "@/types";
+import { useDialog } from "@/contexts/DialogContext";
 
 function toDateInput(value: string | number | null): string {
   if (!value) return "";
@@ -18,6 +19,7 @@ export default function DatabaseView() {
     databaseId: string;
   }>();
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [db, setDb] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,17 +91,36 @@ export default function DatabaseView() {
   }
 
   async function addProperty() {
-    const name = window.prompt("Nome da propriedade:");
-    if (!name) return;
-    const type = window.prompt(
-      `Tipo (${PROPERTY_TYPES.join(", ")}):`,
-      "text"
-    ) as PropertyType | null;
-    if (!type || !PROPERTY_TYPES.includes(type)) return;
+    const result = await dialog.prompt({
+      title: "Nova propriedade",
+      confirmLabel: "Adicionar",
+      fields: [
+        { name: "name", label: "Nome da propriedade", required: true },
+        {
+          name: "type",
+          label: "Tipo",
+          type: "select",
+          required: true,
+          defaultValue: "text",
+          options: PROPERTY_TYPES,
+        },
+        {
+          name: "choices",
+          label: "Opções (separadas por vírgula, para select/status)",
+          placeholder: "Ex.: A fazer, Em andamento, Concluído",
+        },
+      ],
+    });
+    if (!result?.name) return;
+    const type = result.type as PropertyType;
+    if (!PROPERTY_TYPES.includes(type)) return;
+    const name = result.name;
     let options: { choices?: string[] } | undefined;
     if (type === "select" || type === "status") {
-      const raw = window.prompt("Opções (separadas por vírgula):", "");
-      if (raw) options = { choices: raw.split(",").map((s) => s.trim()).filter(Boolean) };
+      if (result.choices)
+        options = {
+          choices: result.choices.split(",").map((s) => s.trim()).filter(Boolean),
+        };
     }
     setBusy(true);
     try {
@@ -118,7 +139,13 @@ export default function DatabaseView() {
   }
 
   async function deleteProperty(prop: DatabaseProperty) {
-    if (!window.confirm(`Remover a propriedade "${prop.name}"?`)) return;
+    const ok = await dialog.confirm({
+      title: "Remover propriedade",
+      message: `Remover a propriedade "${prop.name}"?`,
+      confirmLabel: "Remover",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await databaseService.removeProperty(Number(databaseId), prop.id);
@@ -141,14 +168,20 @@ export default function DatabaseView() {
   }
 
   async function renameDatabase() {
-    const name = window.prompt("Renomear banco de dados:", db?.name || "");
-    if (!name) return;
-    const icon = window.prompt("Ícone (emoji):", db?.icon || "");
+    const result = await dialog.prompt({
+      title: "Renomear banco de dados",
+      confirmLabel: "Salvar",
+      fields: [
+        { name: "name", label: "Nome", defaultValue: db?.name || "", required: true },
+        { name: "icon", label: "Ícone (emoji)", defaultValue: db?.icon || "" },
+      ],
+    });
+    if (!result?.name) return;
     setBusy(true);
     try {
       const updated = await databaseService.update(Number(databaseId), {
-        name,
-        icon: icon || undefined,
+        name: result.name,
+        icon: result.icon || undefined,
       });
       setDb(updated);
     } catch (e: any) {
@@ -159,8 +192,13 @@ export default function DatabaseView() {
   }
 
   async function deleteDatabase() {
-    if (!window.confirm("Excluir este banco de dados? Itens e propriedades serão removidos."))
-      return;
+    const ok = await dialog.confirm({
+      title: "Excluir banco de dados",
+      message: "Excluir este banco de dados? Itens e propriedades serão removidos.",
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await databaseService.remove(Number(databaseId));
@@ -173,16 +211,30 @@ export default function DatabaseView() {
   }
 
   async function editProperty(prop: DatabaseProperty) {
-    const name = window.prompt("Renomear propriedade:", prop.name);
-    if (!name) return;
+    const isChoice = prop.type === "select" || prop.type === "status";
+    const result = await dialog.prompt({
+      title: "Editar propriedade",
+      confirmLabel: "Salvar",
+      fields: [
+        { name: "name", label: "Nome", defaultValue: prop.name, required: true },
+        ...(isChoice
+          ? [
+              {
+                name: "choices",
+                label: "Opções (separadas por vírgula)",
+                defaultValue: (prop.options?.choices || []).join(", "),
+              },
+            ]
+          : []),
+      ],
+    });
+    if (!result?.name) return;
+    const name = result.name;
     let options: { choices?: string[] } | undefined;
-    if (prop.type === "select" || prop.type === "status") {
-      const raw = window.prompt(
-        "Opções (separadas por vírgula):",
-        (prop.options?.choices || []).join(", ")
-      );
-      if (raw !== null)
-        options = { choices: raw.split(",").map((s) => s.trim()).filter(Boolean) };
+    if (isChoice) {
+      options = {
+        choices: (result.choices || "").split(",").map((s) => s.trim()).filter(Boolean),
+      };
     }
     setBusy(true);
     try {

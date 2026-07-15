@@ -3,7 +3,7 @@
 Thin layer: validates input, delegates to AuthService and returns the
 standard API envelope. No business logic lives here.
 """
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request
 from flask_jwt_extended import (
     get_jwt,
     get_jwt_identity,
@@ -123,12 +123,12 @@ def change_password():
 def forgot_password():
     data = ForgotPasswordSchema().load(request.get_json(force=True, silent=True) or {})
     token = AuthService.forgot_password(data["email"])
-    # In production a reset e-mail is sent; the token is returned for the
-    # front-end flow during development.
-    return success(
-        "If the email exists, a reset link has been sent",
-        {"reset_token": token} if token else None,
-    )
+    # The reset link is delivered by e-mail. The raw token is only echoed back
+    # in DEBUG builds to ease local testing; production never leaks it.
+    payload = None
+    if token and current_app.config.get("DEBUG"):
+        payload = {"reset_token": token}
+    return success("If the email exists, a reset link has been sent", payload)
 
 
 @auth_bp.post("/reset-password")

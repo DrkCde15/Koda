@@ -48,13 +48,21 @@ class WorkspaceMember(db.Model, PKMixin, TimestampMixin):
     )
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "id": self.id,
             "workspace_id": self.workspace_id,
             "user_id": self.user_id,
             "role": self.role,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+        if self.user is not None:
+            data["user"] = {
+                "id": self.user.id,
+                "full_name": self.user.full_name,
+                "email": self.user.email,
+                "avatar_url": self.user.avatar_url,
+            }
+        return data
 
 
 class Invite(db.Model, PKMixin, TimestampMixin):

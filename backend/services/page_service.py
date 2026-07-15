@@ -85,7 +85,7 @@ class PageService:
             is_favorite=is_favorite,
         )
         if changed:
-            PageRepository.create_revision(page)
+            PageRepository.create_revision(page, edited_by=user_id)
         return page.to_dict()
 
     @staticmethod

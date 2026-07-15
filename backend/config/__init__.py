@@ -6,6 +6,11 @@ defaults but MUST be overridden via environment variables in production.
 import os
 from datetime import timedelta
 
+# Absolute path to the backend directory so SQLite falls back to a stable file
+# regardless of the current working directory.
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_DEFAULT_SQLITE = "sqlite:///" + os.path.join(_BACKEND_DIR, "koda.db")
+
 
 class BaseConfig:
     """Base configuration shared by every environment."""
@@ -15,14 +20,16 @@ class BaseConfig:
     )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql://koda:koda@localhost:5432/koda",
-    )
+    # Defaults to a local SQLite file so the backend runs standalone without a
+    # separate PostgreSQL server. Set DATABASE_URL (e.g. via Docker) to use
+    # PostgreSQL in production.
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", _DEFAULT_SQLITE)
 
     JWT_SECRET_KEY = os.getenv(
         "JWT_SECRET_KEY", "jwt-dev-secret-change-me-please-override-prod-32"
     )
+    # Signs password-reset tokens. Defaults to JWT_SECRET_KEY when unset.
+    RESET_TOKEN_SECRET = os.getenv("RESET_TOKEN_SECRET")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv("JWT_ACCESS_EXP_MIN", "15")))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.getenv("JWT_REFRESH_EXP_DAYS", "30")))
     JWT_TOKEN_LOCATION = ["headers"]
@@ -41,7 +48,11 @@ class BaseConfig:
     MAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Koda")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost")
 
-    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
+    # Absolute so uploads land in a stable location and Flask's send_file
+    # (which resolves relative paths against app.root_path) reads them back.
+    UPLOAD_FOLDER = os.path.abspath(
+        os.getenv("UPLOAD_FOLDER") or os.path.join(_BACKEND_DIR, "uploads")
+    )
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(10 * 1024 * 1024)))
 
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")

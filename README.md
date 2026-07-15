@@ -18,7 +18,8 @@ escalabilidade.
 | ------------- | ----------------------------------------------------------------- |
 | Frontend      | React, TypeScript, Vite, TailwindCSS, React Router, Axios, TanStack Query, React Hook Form, Zustand |
 | Backend       | Python, Flask, Flask-SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Flask-CORS, Marshmallow, Gunicorn |
-| Banco         | PostgreSQL                                                        |
+| Editor        | TipTap (rich-text + nós customizados: subpágina, tabela, imagem, arquivo) |
+| Banco         | PostgreSQL (com fallback automático para SQLite em dev)          |
 | Cache         | Redis                                                             |
 | Autenticação  | JWT Access + Refresh Token (com revogação via Redis)             |
 | Containerização | Docker, Docker Compose                                         |
@@ -43,8 +44,9 @@ frontend/
   src/
     components/ layouts/ pages/  -> UI
     services/                    -> chamadas à API
-    store/                       -> Zustand (auth)
-    contexts/                    -> Toast (feedback)
+    store/                       -> Zustand (auth, tema)
+    contexts/                    -> Toast (feedback), Dialog (modais)
+    components/editorNodes.tsx   -> nós customizados do TipTap (subpágina, tabela, imagem, arquivo)
     hooks/ types/ utils/ lib/    -> suporte
   public/
     logo.png                     -> logotipo da marca
@@ -55,6 +57,22 @@ login/registro), no cabeçalho do `AppLayout` (sidebar) e como favicon na
 aba do navegador (`index.html`).
 
 Princípios aplicados: SOLID, DRY, KISS, Clean Code e Separation of Concerns.
+
+### Backend serve o frontend (SPA)
+
+O build do frontend (`frontend/dist`) é servido pelo próprio backend Flask
+(rota catch-all com fallback para `index.html`; requisições a `/api/*`
+inexistentes retornam 404 em JSON). Por isso não há um serviço `frontend`
+separado no Docker — o `backend/Dockerfile` é multi-stage: builda o frontend e
+copia o `dist` para dentro da imagem do backend. O caminho pode ser ajustado via
+`FRONTEND_DIST` (padrão `../frontend/dist`).
+
+### Banco: PostgreSQL com fallback SQLite
+
+Em produção/Docker, defina `DATABASE_URL` para usar PostgreSQL. Em
+desenvolvimento local, se `DATABASE_URL` não estiver definido, o backend usa
+automaticamente um arquivo SQLite (`backend/koda.db`), permitindo rodar sem
+um servidor de banco separado.
 
 ## Padrão de resposta da API
 
@@ -77,10 +95,10 @@ docker compose down         # para e remove os containers
 docker compose logs -f backend   # acompanha os logs do backend
 ```
 
-- Frontend: http://localhost
-- Backend (API): http://localhost:5000
+- Aplicação (frontend + API): http://localhost:5000 — o backend serve a SPA
 - PostgreSQL: 5432 · Redis (Koda): 6381 (interno 6379)
 - PostgreSQL e Redis sobem como serviços dependentes.
+- Não há serviço `frontend` separado: o build é embutido na imagem do backend.
 
 As migrações do banco são aplicadas automaticamente no entrypoint do backend
 (`flask db upgrade`) após o PostgreSQL ficar disponível.
@@ -137,6 +155,7 @@ inexistente. Um aviso é logado no startup indicando o modo degradado.
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+# DATABASE_URL é opcional: sem ele, usa SQLite (backend/koda.db) automaticamente
 export DATABASE_URL=postgresql://koda:koda@localhost:5432/koda
 export REDIS_URL=redis://localhost:6379/0
 export SECRET_KEY=dev-secret
@@ -172,34 +191,46 @@ cd backend && pytest
 - **E-mail transacional real** para convites e recuperação de senha (via Google Apps Script)
 
 ### Workspaces
-- Criar / editar / excluir
-- Convites por email (token)
+- Criar / editar / excluir (via modais estilizados)
+- Convites por email (token): criar, listar pendentes e revogar
 - Papéis: `owner`, `admin`, `editor`, `viewer`
+- Gestão de membros na UI: nomes reais, troca de papel e remoção
 - Permissões por papel (visualização, edição, gerência)
 
 ### Páginas
-- Título, ícone, conteúdo (estrutura pronta para o editor)
-- Subpáginas (auto-relacionamento)
+- Título, ícone e capa (definidos na criação)
+- Subpáginas (auto-relacionamento) com botão "Voltar" para a página pai
 - Favoritos
 - Lixeira (soft delete) e restauração
-- Histórico de revisões
+- Histórico de revisões (com registro de quem editou)
 
-### Blocos (estrutura do editor)
-- Blocos tipados (parágrafo, títulos, listas, citação, código, etc.)
-- Aninháveis
-- Editor rich-text (TipTap) que consome/gera os blocos da API
+### Editor de conteúdo (TipTap)
+- Editor rich-text que consome/gera os blocos da API
+- Blocos tipados: parágrafo, títulos, listas, citação, código, divisor
+- **Conteúdo embutido no texto** (nós customizados):
+  - **Subpáginas** — cria página filha e insere link navegável
+  - **Tabelas** — embute um banco de dados do workspace (novo ou existente)
+  - **Imagens** — upload pelo botão ou colando com **Ctrl+V** (exibidas inline)
+  - **Arquivos** — anexo com download; o botão detecta imagens automaticamente
 
 ### Bancos de dados e Tarefas
 - Bancos de dados relacionais por workspace (propriedades tipadas)
-- Itens (linhas) com valores por propriedade
+- Itens (linhas) com valores por propriedade; CRUD completo na UI
 - Preset de Tarefas (título, status, data, responsável)
 
 ### Arquivos
 - Upload com validação de tipo/tamanho e metadados persistidos
+- Listagem, download autenticado (blob) e exclusão na UI
 - Serviço de download protegido por workspace
 
 ### Busca
 - Busca de páginas por título/conteúdo dentro de um workspace
+
+### Interface
+- Tema claro/escuro
+- Modais estilizados para prompts/confirmações (sem diálogos nativos do navegador)
+- Campo de senha com botão de exibir/ocultar
+- Code splitting das rotas (lazy loading) para carregamento mais rápido
 
 ## E-mail transacional (Google Apps Script)
 

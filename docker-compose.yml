@@ -21,7 +21,9 @@ services:
       - "6381:6379"
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       FLASK_ENV: production
       DATABASE_URL: postgresql://koda:koda@postgres:5432/koda
@@ -38,13 +40,6 @@ services:
         condition: service_started
     ports:
       - "5000:5000"
-
-  frontend:
-    build: ./frontend
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
 
 volumes:
   pgdata:

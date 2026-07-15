@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 
 import { AuthLayout } from "@/layouts/AuthLayout";
+import { PasswordInput } from "@/components/PasswordInput";
 import { authService } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/contexts/ToastContext";
@@ -43,11 +44,7 @@ export function RegisterPage() {
         </div>
         <div>
           <label className="mb-1 block text-sm">Senha</label>
-          <input
-            className="input"
-            type="password"
-            {...register("password", { required: true, minLength: 8 })}
-          />
+          <PasswordInput {...register("password", { required: true, minLength: 8 })} />
         </div>
         <button className="btn-primary w-full" type="submit">
           Cadastrar

@@ -84,6 +84,31 @@ export const workspaceService = {
     return data.data as Invite;
   },
 
+  async listInvites(id: number): Promise<Invite[]> {
+    const { data } = await api.get<ApiResponse<Invite[]>>(`/workspaces/${id}/invites`);
+    return (data.data as Invite[]) || [];
+  },
+
+  async deleteInvite(id: number, inviteId: number): Promise<void> {
+    await api.delete(`/workspaces/${id}/invites/${inviteId}`);
+  },
+
+  async changeMemberRole(
+    id: number,
+    userId: number,
+    role: string,
+  ): Promise<WorkspaceMember> {
+    const { data } = await api.put<ApiResponse<WorkspaceMember>>(
+      `/workspaces/${id}/members/${userId}`,
+      { role },
+    );
+    return data.data as WorkspaceMember;
+  },
+
+  async removeMember(id: number, userId: number): Promise<void> {
+    await api.delete(`/workspaces/${id}/members/${userId}`);
+  },
+
   async acceptInvite(token: string): Promise<Workspace> {
     const { data } = await api.post<ApiResponse<Workspace>>("/workspaces/invites/accept", {
       token,

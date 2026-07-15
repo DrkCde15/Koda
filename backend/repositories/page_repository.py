@@ -95,12 +95,12 @@ class PageRepository:
         db.session.commit()
 
     @staticmethod
-    def create_revision(page: Page) -> PageRevision:
+    def create_revision(page: Page, edited_by: int) -> PageRevision:
         revision = PageRevision(
             page_id=page.id,
             title=page.title,
             content=page.content,
-            edited_by=page.created_by,
+            edited_by=edited_by,
         )
         db.session.add(revision)
         db.session.commit()

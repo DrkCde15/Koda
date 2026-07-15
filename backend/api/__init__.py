@@ -4,22 +4,33 @@ Centralises extension binding, blueprint registration and cross-cutting
 middleware so each feature remains a thin, independently testable module.
 """
 import logging
+import os
 
-from flask import Flask
+from flask import Flask, send_from_directory
 
 from config import get_config
 from extensions import cors, db, jwt, migrate, redis_client
 from middlewares.errors import errors_bp
 from middlewares.jwt_handlers import check_if_token_revoked
 
+# Directory holding the built frontend (frontend/dist). Overridable via env so
+# the Docker image can copy the build to a well-known location.
+FRONTEND_DIST = os.environ.get(
+    "FRONTEND_DIST",
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
+    ),
+)
+
 
 def create_app(env: str = None) -> Flask:
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(get_config(env))
 
     _init_extensions(app)
     _register_blueprints(app)
     _register_jwt_handlers()
+    _register_spa(app)
 
     return app
 
@@ -69,3 +80,28 @@ def _register_blueprints(app: Flask) -> None:
 def _register_jwt_handlers() -> None:
     # Bind the blocklist loader defined in middlewares.jwt_handlers.
     jwt.token_in_blocklist_loader(check_if_token_revoked)
+
+
+def _register_spa(app: Flask) -> None:
+    """Serve the built single-page app so the backend can run standalone.
+
+    API and error routes are registered first, so this catch-all only handles
+    non-``/api`` paths: it returns the requested static asset when it exists and
+    falls back to ``index.html`` for client-side routes.
+    """
+    dist = FRONTEND_DIST
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def spa(path: str):
+        if path.startswith("api/"):
+            return {"success": False, "message": "Not found"}, 404
+        if not os.path.isdir(dist):
+            return (
+                "Frontend build not found. Run `npm run build` in ./frontend.",
+                404,
+            )
+        full = os.path.join(dist, path)
+        if path and os.path.isfile(full):
+            return send_from_directory(dist, path)
+        return send_from_directory(dist, "index.html")

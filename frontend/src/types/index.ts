@@ -22,6 +22,24 @@ export interface WorkspaceMember {
   user_id: number;
   role: string;
   created_at?: string;
+  user?: {
+    id: number;
+    full_name: string;
+    email: string;
+    avatar_url?: string | null;
+  };
+}
+
+export interface FileItem {
+  id: number;
+  workspace_id: number;
+  uploader_id: number;
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  url: string;
+  created_at?: string;
 }
 
 export interface Invite {

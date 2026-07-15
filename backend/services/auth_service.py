@@ -17,6 +17,14 @@ from services.email_service import send_email
 RESET_TTL_SECONDS = 3600
 
 
+def _reset_secret() -> str:
+    """Secret used to sign password-reset tokens.
+
+    Falls back to the app's JWT secret so it is never a public constant.
+    """
+    return current_app.config.get("RESET_TOKEN_SECRET") or current_app.config["JWT_SECRET_KEY"]
+
+
 class AuthError(Exception):
     """Domain-level authentication failure."""
 
@@ -59,7 +67,7 @@ class AuthService:
             return None
         token = pyjwt.encode(
             {"sub": str(user.id), "purpose": "reset"},
-            "reset-secret",  # short-lived, stored in Redis by id
+            _reset_secret(),  # short-lived, stored in Redis by id
             algorithm="HS256",
         )
         if redis_client is not None:
@@ -89,7 +97,7 @@ class AuthService:
         else:
             user_id = None
         try:
-            payload = pyjwt.decode(token, "reset-secret", algorithms=["HS256"])
+            payload = pyjwt.decode(token, _reset_secret(), algorithms=["HS256"])
         except pyjwt.PyJWTError as exc:
             raise AuthError("Invalid reset token") from exc
         if payload.get("purpose") != "reset":
