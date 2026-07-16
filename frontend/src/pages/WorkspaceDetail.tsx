@@ -283,6 +283,8 @@ export function WorkspaceDetailPage() {
         }}
       >
         <input
+          id="search-pages"
+          name="search-pages"
           className="input"
           placeholder="Buscar páginas…"
           value={searchInput}
@@ -577,6 +579,10 @@ export function WorkspaceDetailPage() {
                 className="mb-6 flex flex-wrap gap-2"
               >
                 <input
+                  id="invite-email"
+                  name="invite-email"
+                  type="email"
+                  autoComplete="email"
                   className="input"
                   placeholder="email@exemplo.com"
                   value={inviteEmail}

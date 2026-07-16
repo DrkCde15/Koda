@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Editor, useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -180,11 +180,14 @@ function nodeToBlock(node: JsonNode): { type: string; content: Record<string, un
   }
 }
 
-function debounce(fn: () => void, ms: number): () => void {
+function debounce(fn: () => void, ms: number): { call: () => void; cancel: () => void } {
   let t: ReturnType<typeof setTimeout>;
-  return () => {
-    clearTimeout(t);
-    t = setTimeout(fn, ms);
+  return {
+    call: () => {
+      clearTimeout(t);
+      t = setTimeout(fn, ms);
+    },
+    cancel: () => clearTimeout(t),
   };
 }
 
@@ -203,51 +206,67 @@ export function BlockEditor({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const uploadImageRef = useRef<(file: File) => void>(() => {});
   const applyingInitial = useRef(false);
+  const isMounted = useRef(true);
   const blocksRef = useRef<Block[]>(initialBlocks);
   blocksRef.current = initialBlocks;
   const editorRef = useRef<Editor | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sync = useCallback(
-    debounce(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const nodes = (editor.getJSON() as JsonNode).content || [];
-      const next = nodes.map(nodeToBlock);
-      const current = blocksRef.current;
-      const max = Math.max(current.length, next.length);
-      (async () => {
-        for (let i = 0; i < max; i++) {
-          const cur = current[i];
-          const nxt = next[i];
-          if (cur && nxt) {
-            const changed =
-              cur.type !== nxt.type ||
-              JSON.stringify(cur.content) !== JSON.stringify(nxt.content) ||
-              cur.position !== i;
-            if (changed) {
-              await blockService.update(cur.id, {
+  const debouncedSync = useMemo(
+    () =>
+      debounce(() => {
+        if (!isMounted.current) return;
+        const editor = editorRef.current;
+        if (!editor) return;
+        const nodes = (editor.getJSON() as JsonNode).content || [];
+        const next = nodes.map(nodeToBlock);
+        const current = blocksRef.current;
+        const max = Math.max(current.length, next.length);
+        (async () => {
+          if (!isMounted.current) return;
+          for (let i = 0; i < max; i++) {
+            if (!isMounted.current) return;
+            const cur = current[i];
+            const nxt = next[i];
+            if (cur && nxt) {
+              const changed =
+                cur.type !== nxt.type ||
+                JSON.stringify(cur.content) !== JSON.stringify(nxt.content) ||
+                cur.position !== i;
+              if (changed) {
+                await blockService.update(cur.id, {
+                  type: nxt.type,
+                  content: nxt.content,
+                  position: i,
+                });
+              }
+            } else if (nxt && !cur) {
+              await blockService.create({
+                page_id: pageId,
                 type: nxt.type,
                 content: nxt.content,
                 position: i,
               });
+            } else if (cur && !nxt) {
+              await blockService.remove(cur.id);
             }
-          } else if (nxt && !cur) {
-            await blockService.create({
-              page_id: pageId,
-              type: nxt.type,
-              content: nxt.content,
-              position: i,
-            });
-          } else if (cur && !nxt) {
-            await blockService.remove(cur.id);
           }
-        }
-        queryClient.invalidateQueries({ queryKey: ["blocks", pageId] });
-      })();
-    }, 600),
+          if (isMounted.current) {
+            queryClient.invalidateQueries({ queryKey: ["blocks", pageId] });
+          }
+        })();
+      }, 600),
     [pageId, queryClient],
   );
+
+  // Cancel pending sync and mark unmounted when the component is destroyed
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      debouncedSync.cancel();
+    };
+  }, [debouncedSync]);
 
   const editor = useEditor({
     extensions: [StarterKit, SubpageNode, DatabaseNode, FileNode, ImageNode],
@@ -269,21 +288,25 @@ export function BlockEditor({
     },
     onUpdate: () => {
       if (applyingInitial.current) return;
-      sync();
+      debouncedSync.call();
     },
   });
 
   editorRef.current = editor;
 
   useEffect(() => {
-    if (!editor || applyingInitial.current) return;
+    if (!editor) return;
     applyingInitial.current = true;
     const doc = {
       type: "doc",
       content: initialBlocks.map(blockToNode),
     };
     editor.commands.setContent(doc, false);
-    applyingInitial.current = false;
+    // Reset asynchronously: setContent fires onUpdate synchronously,
+    // so we must delay the reset to the next microtask to keep it suppressed.
+    Promise.resolve().then(() => {
+      applyingInitial.current = false;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 

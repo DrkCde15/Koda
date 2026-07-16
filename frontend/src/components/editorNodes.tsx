@@ -33,7 +33,9 @@ function SubpageView({ node }: NodeViewProps) {
         type="button"
         className={cardClass + " w-full"}
         contentEditable={false}
-        onClick={() => pageId && navigate(`/pages/${pageId}`)}
+        onClick={() => {
+          if (pageId) navigate(`/pages/${pageId}`);
+        }}
       >
         <span>{icon}</span>
         <span className="font-medium underline decoration-gray-300">{title}</span>

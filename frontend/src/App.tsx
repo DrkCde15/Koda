@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/layouts/AppLayout";
@@ -26,6 +26,12 @@ function PageFallback() {
   return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
 }
 
+/** Wrapper that forces a full remount of PageViewPage when the page ID changes */
+function PageViewPageKeyed() {
+  const { id } = useParams<{ id: string }>();
+  return <PageViewPage key={id} />;
+}
+
 export function App() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -48,7 +54,7 @@ export function App() {
             path="workspaces/:workspaceId/databases/:databaseId"
             element={<DatabaseViewPage />}
           />
-          <Route path="pages/:id" element={<PageViewPage />} />
+          <Route path="pages/:id" element={<PageViewPageKeyed />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

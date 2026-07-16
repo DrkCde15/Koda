@@ -17,11 +17,13 @@ export function PageViewPage() {
   const { data: page, isLoading } = useQuery({
     queryKey: ["page", pageId],
     queryFn: () => pageService.get(pageId),
+    staleTime: 0,
   });
 
-  const { data: blocks = [] } = useQuery({
+  const { data: blocks, isLoading: isBlocksLoading } = useQuery({
     queryKey: ["blocks", pageId],
     queryFn: () => blockService.list(pageId),
+    staleTime: 0,
   });
 
   const updatePage = useMutation({
@@ -34,11 +36,12 @@ export function PageViewPage() {
     mutationFn: () => pageService.remove(pageId),
     onSuccess: () => {
       toast.push("Página enviada para a lixeira", "success");
-      navigate(-1);
+      if (page?.parent_id) navigate(`/pages/${page.parent_id}`);
+      else navigate(`/workspaces/${page?.workspace_id}`);
     },
   });
 
-  if (isLoading) return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
+  if (isLoading || isBlocksLoading) return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
   if (!page) return <div className="p-8 text-gray-500 dark:text-gray-300">Página não encontrada.</div>;
 
   return (
@@ -53,6 +56,7 @@ export function PageViewPage() {
                 ? navigate(`/pages/${page.parent_id}`)
                 : navigate(`/workspaces/${page.workspace_id}`)
             }
+            onMouseDown={(e) => e.preventDefault()}
           >
             ← Voltar
           </button>
@@ -72,6 +76,9 @@ export function PageViewPage() {
       </div>
 
       <input
+        key={`title-${pageId}`}
+        id={`page-title-${pageId}`}
+        name="page-title"
         className="mb-6 w-full border-none bg-transparent text-3xl font-bold text-gray-900 outline-none dark:bg-transparent dark:text-white"
         defaultValue={page.title}
         onBlur={(e) => {
@@ -82,9 +89,10 @@ export function PageViewPage() {
       />
 
       <BlockEditor
+        key={`editor-${pageId}`}
         pageId={pageId}
         workspaceId={page.workspace_id}
-        initialBlocks={blocks as Block[]}
+        initialBlocks={(blocks as Block[]) || []}
       />
     </div>
   );
