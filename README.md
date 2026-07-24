@@ -17,12 +17,42 @@ escalabilidade.
 | Camada        | Tecnologias                                                        |
 | ------------- | ----------------------------------------------------------------- |
 | Frontend      | React, TypeScript, Vite, TailwindCSS, React Router, Axios, TanStack Query, React Hook Form, Zustand |
-| Backend       | Python, Flask, Flask-SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Flask-CORS, Marshmallow, Gunicorn |
+| Backend       | Python, Flask, Flask-SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Flask-CORS, Marshmallow, Gunicorn, Flask-Limiter, python-json-logger, flask-swagger-ui |
 | Editor        | TipTap (rich-text + nós customizados: subpágina, tabela, imagem, arquivo) |
 | Banco         | PostgreSQL (com fallback automático para SQLite em dev)          |
 | Cache         | Redis                                                             |
 | Autenticação  | JWT Access + Refresh Token (com revogação via Redis)             |
 | Containerização | Docker, Docker Compose                                         |
+
+## Funcionalidades de Segurança e Qualidade
+
+### Rate Limiting
+- Proteção contra abuso e ataques de força bruta com Flask-Limiter
+- Limites configuráveis por endpoint (login, registro, recuperação de senha)
+- Suporte a Redis para contadores distribuídos (fallback para memória)
+- Configuração via variáveis de ambiente (`RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTER`)
+
+### Logging Estruturado
+- Logs em formato JSON para produção (facilita integração com ELK, Datadog, etc.)
+- Formato legível para desenvolvimento
+- Configuração via `LOG_FORMAT` (`json` ou `text`)
+- Inclusão automática de request ID para rastreamento
+
+### Documentação da API
+- Interface Swagger/OpenAPI disponível em `/api/docs`
+- Especificação completa dos endpoints, parâmetros e respostas
+- Acessível apenas em ambiente de desenvolvimento (`FLASK_ENV=development`)
+
+### Variáveis de Ambiente
+- Todas as configurações sensíveis via arquivo `.env` (não versionado)
+- Arquivo `.env.example` fornecido como template
+- Validação de variáveis obrigatórias no startup
+
+### Testes e Cobertura
+- Testes automatizados com pytest
+- Cobertura de código configurada (mínimo 70%)
+- Relatórios em terminal e HTML
+- Execução: `cd backend && pytest --cov`
 
 ## Arquitetura
 
@@ -88,6 +118,14 @@ Erro:
 
 ## Como executar (Docker)
 
+1. Copie o arquivo de exemplo de variáveis de ambiente:
+```bash
+cp .env.example .env
+# Gere chaves seguras para produção:
+openssl rand -hex 32  # use a saída para SECRET_KEY e JWT_SECRET_KEY
+```
+
+2. Suba os containers:
 ```bash
 docker compose up --build   # builda e sobe tudo (modo foreground)
 docker compose up -d        # sobe tudo em segundo plano
@@ -96,9 +134,11 @@ docker compose logs -f backend   # acompanha os logs do backend
 ```
 
 - Aplicação (frontend + API): http://localhost:5000 — o backend serve a SPA
+- Documentação da API: http://localhost:5000/api/docs (apenas desenvolvimento)
 - PostgreSQL: 5432 · Redis (Koda): 6381 (interno 6379)
 - PostgreSQL e Redis sobem como serviços dependentes.
 - Não há serviço `frontend` separado: o build é embutido na imagem do backend.
+- **Nunca commite o arquivo `.env`** — ele está no `.gitignore`
 
 As migrações do banco são aplicadas automaticamente no entrypoint do backend
 (`flask db upgrade`) após o PostgreSQL ficar disponível.
@@ -160,6 +200,10 @@ export DATABASE_URL=postgresql://koda:koda@localhost:5432/koda
 export REDIS_URL=redis://localhost:6379/0
 export SECRET_KEY=dev-secret
 export JWT_SECRET_KEY=dev-jwt-secret
+export FLASK_ENV=development
+export LOG_FORMAT=text
+export RATE_LIMIT_LOGIN=5 per minute
+export RATE_LIMIT_REGISTER=3 per hour
 flask db upgrade
 flask --app app:app run
 ```
@@ -178,6 +222,10 @@ npm run dev
 
 ```bash
 cd backend && pytest
+# Com relatório de cobertura:
+cd backend && pytest --cov
+# Gerar relatório HTML:
+cd backend && pytest --cov --cov-report=html
 ```
 
 ## Funcionalidades
@@ -251,4 +299,15 @@ Se `GOOGLE_SCRIPT_URL` estiver vazio, o app roda em **modo degradado** (o e-mail
 ignorado com um aviso no log, sem quebrar o fluxo).
 
 ## Próximos passos (roadmap)
+
+### Em andamento
 - Recursos de Inteligência Artificial (geração de conteúdo, resumo, busca semântica)
+
+### Melhorias sugeridas (pós-implementação)
+- **CI/CD**: Pipeline de testes automatizados (GitHub Actions/GitLab CI)
+- **Monitoramento**: Integração com Prometheus/Grafana para métricas de performance
+- **Colaboração em tempo real**: WebSockets para edição simultânea de páginas
+- **Backup automático**: Snapshots periódicos do banco de dados
+- **Notificações**: Sistema de notificações em tempo real para convites e menções
+- **Mobile app**: Aplicativo nativo para iOS/Android
+- **Internacionalização**: Suporte a múltiplos idiomas (i18n)

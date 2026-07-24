@@ -1,15 +1,72 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyd
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
 .venv/
-*.db
-uploads/
-.env
-
-# Node / Frontend
-node_modules/
+*.egg-info/
 dist/
-.vite/
+build/
+*.egg
 *.log
+*.pot
+*.pyc
+koda.db
+koda_test.db
+
+# Flask
+.instance/
+.webassets-cache
+
+# Environment
 .env
 .env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+*.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# Docker
+.dockerignore
+
+# Testes
+.coverage
+htmlcov/
+.pytest_cache/
+tests/reports/
+
+# Uploads (arquivos enviados pelos usuários)
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Temporários
+*.tmp
+*.temp
+.cache/

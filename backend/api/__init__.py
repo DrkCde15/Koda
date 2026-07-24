@@ -5,13 +5,17 @@ middleware so each feature remains a thin, independently testable module.
 """
 import logging
 import os
+from datetime import datetime
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify, request
+from werkzeug.exceptions import HTTPException
 
 from config import get_config
+from config.logging_config import configure_logging, get_logger
 from extensions import cors, db, jwt, migrate, redis_client
 from middlewares.errors import errors_bp
 from middlewares.jwt_handlers import check_if_token_revoked
+from middlewares.rate_limiter import init_rate_limiter
 
 # Directory holding the built frontend (frontend/dist). Overridable via env so
 # the Docker image can copy the build to a well-known location.
@@ -22,15 +26,31 @@ FRONTEND_DIST = os.environ.get(
     ),
 )
 
+# Module logger
+logger = get_logger(__name__)
+
 
 def create_app(env: str = None) -> Flask:
     app = Flask(__name__, static_folder=None)
     app.config.from_object(get_config(env))
 
+    # Configure structured logging first
+    configure_logging(app)
+
     _init_extensions(app)
     _register_blueprints(app)
     _register_jwt_handlers()
+    _init_rate_limiter(app)
     _register_spa(app)
+    _register_error_handlers(app)
+    _register_health_check(app)
+    _register_request_hooks(app)
+
+    logger.info(
+        f"Application created | Environment: {env or 'development'} | "
+        f"Database: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[0]} | "
+        f"Redis: {'connected' if redis_client else 'unavailable'}"
+    )
 
     return app
 
@@ -47,9 +67,10 @@ def _init_extensions(app: Flask) -> None:
             app.config["REDIS_URL"], decode_responses=True
         )
         redis_client.ping()
+        logger.info("Redis connected successfully")
     except Exception as exc:  # pragma: no cover - depends on infra
         redis_client = None
-        logging.getLogger(__name__).warning(
+        logger.warning(
             "Redis indisponível (%s). Rodando em modo degradado: revogação de "
             "token (logout) e reset de senha ficam desabilitados.",
             exc,
@@ -65,6 +86,7 @@ def _register_blueprints(app: Flask) -> None:
     from api.files.files import files_bp
     from api.search.search import search_bp
     from api.databases.databases import databases_bp
+    from api.docs import register_docs
 
     app.register_blueprint(errors_bp)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -75,11 +97,126 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(files_bp, url_prefix="/api/files")
     app.register_blueprint(search_bp, url_prefix="/api/search")
     app.register_blueprint(databases_bp, url_prefix="/api/databases")
+    
+    # Register API documentation
+    register_docs(app)
+    logger.info("API documentation registered at /api/docs")
 
 
 def _register_jwt_handlers() -> None:
     # Bind the blocklist loader defined in middlewares.jwt_handlers.
     jwt.token_in_blocklist_loader(check_if_token_revoked)
+
+
+def _init_rate_limiter(app: Flask) -> None:
+    """Initialize rate limiter if Flask-Limiter is available."""
+    try:
+        init_rate_limiter(app)
+        logger.info("Rate limiter initialized")
+    except ImportError:
+        logger.warning("Flask-Limiter not installed. Rate limiting disabled.")
+
+
+def _register_error_handlers(app: Flask) -> None:
+    """Register global error handlers."""
+
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        """Handle HTTP exceptions with standardized response."""
+        logger.warning(f"HTTP {e.code}: {e.description} | Path: {request.path}")
+        return jsonify({
+            "success": False,
+            "message": e.description,
+            "errors": []
+        }), e.code
+
+    @app.errorhandler(429)
+    def handle_rate_limit(e):
+        """Handle rate limit errors."""
+        logger.warning(f"Rate limit exceeded | IP: {request.remote_addr} | Path: {request.path}")
+        return jsonify({
+            "success": False,
+            "message": "Too many requests. Please try again later.",
+            "errors": [str(e.description)]
+        }), 429
+
+    @app.errorhandler(500)
+    def handle_internal_error(e):
+        """Handle internal server errors."""
+        logger.error(f"Internal server error: {str(e)} | Path: {request.path}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": "Internal server error",
+            "errors": []
+        }), 500
+
+
+def _register_health_check(app: Flask) -> None:
+    """Register health check endpoint."""
+
+    @app.route("/health")
+    def health_check():
+        """Health check endpoint for monitoring."""
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "services": {
+                "database": "unknown",
+                "redis": "unavailable"
+            }
+        }
+
+        # Check database
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            health_status["services"]["database"] = "connected"
+        except Exception as e:
+            health_status["services"]["database"] = "error"
+            health_status["status"] = "degraded"
+
+        # Check Redis
+        if redis_client:
+            try:
+                redis_client.ping()
+                health_status["services"]["redis"] = "connected"
+            except Exception:
+                health_status["services"]["redis"] = "error"
+                health_status["status"] = "degraded"
+        else:
+            health_status["services"]["redis"] = "disabled"
+
+        return jsonify(health_status), 200 if health_status["status"] == "healthy" else 503
+
+
+def _register_request_hooks(app: Flask) -> None:
+    """Register request/response hooks."""
+
+    @app.before_request
+    def before_request():
+        """Add request ID and start time for request tracing."""
+        import uuid
+        request.request_id = str(uuid.uuid4())
+        request.start_time = datetime.utcnow()
+
+    @app.after_request
+    def after_request(response):
+        """Log request details and add correlation headers."""
+        if hasattr(request, 'start_time'):
+            duration = (datetime.utcnow() - request.start_time).total_seconds() * 1000
+            logger.info(
+                f"Request completed | "
+                f"Method: {request.method} | "
+                f"Path: {request.path} | "
+                f"Status: {response.status_code} | "
+                f"Duration: {duration:.2f}ms | "
+                f"RequestID: {getattr(request, 'request_id', 'unknown')}"
+            )
+
+        # Add request ID to response headers
+        if hasattr(request, 'request_id'):
+            response.headers["X-Request-ID"] = request.request_id
+
+        return response
 
 
 def _register_spa(app: Flask) -> None:
@@ -95,8 +232,9 @@ def _register_spa(app: Flask) -> None:
     @app.route("/<path:path>")
     def spa(path: str):
         if path.startswith("api/"):
-            return {"success": False, "message": "Not found"}, 404
+            return jsonify({"success": False, "message": "Not found"}), 404
         if not os.path.isdir(dist):
+            logger.error("Frontend build directory not found", extra={"path": dist})
             return (
                 "Frontend build not found. Run `npm run build` in ./frontend.",
                 404,

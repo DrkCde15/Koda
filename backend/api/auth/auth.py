@@ -10,10 +10,13 @@ from flask_jwt_extended import (
     jwt_required,
     current_user,
 )
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from middlewares.auth import get_current_user
 from middlewares.jwt_handlers import revoke_token
 from middlewares.responses import error, success
+from middlewares.rate_limiter import rate_limit_login, rate_limit_register, rate_limit_password_reset
 from schemas.auth_schema import (
     ChangePasswordSchema,
     ForgotPasswordSchema,
@@ -26,8 +29,18 @@ from services.auth_service import AuthError, AuthService
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+# Initialize limiter (will be set by init_app)
+limiter = None
+
+
+def init_limiter(app_limiter):
+    """Initialize the limiter for this blueprint."""
+    global limiter
+    limiter = app_limiter
+
 
 @auth_bp.post("/register")
+@limiter.limit(rate_limit_register() if limiter else "3 per hour")
 def register():
     data = RegisterSchema().load(request.get_json(force=True, silent=True) or {})
     user, access, refresh = AuthService.register(
@@ -41,6 +54,7 @@ def register():
 
 
 @auth_bp.post("/login")
+@limiter.limit(rate_limit_login() if limiter else "5 per minute")
 def login():
     data = LoginSchema().load(request.get_json(force=True, silent=True) or {})
     user = AuthService.authenticate(data["email"], data["password"])
@@ -120,6 +134,7 @@ def change_password():
 
 
 @auth_bp.post("/forgot-password")
+@limiter.limit(rate_limit_password_reset() if limiter else "3 per hour")
 def forgot_password():
     data = ForgotPasswordSchema().load(request.get_json(force=True, silent=True) or {})
     token = AuthService.forgot_password(data["email"])
@@ -132,6 +147,7 @@ def forgot_password():
 
 
 @auth_bp.post("/reset-password")
+@limiter.limit(rate_limit_password_reset() if limiter else "3 per hour")
 def reset_password():
     data = ResetPasswordSchema().load(request.get_json(force=True, silent=True) or {})
     try:
