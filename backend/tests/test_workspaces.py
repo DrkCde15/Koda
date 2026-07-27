@@ -104,7 +104,7 @@ def test_get_workspace_detail(client, auth_headers):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["success"] is True
-    assert data["data"]["name"] == "Detail Test"
+    assert data["data"]["workspace"]["name"] == "Detail Test"
 
 
 def test_update_workspace(client, auth_headers):
@@ -203,10 +203,9 @@ def test_add_workspace_member(client, auth_headers):
     )
     workspace_id = json.loads(create_response.data)["data"]["id"]
     
-    # Add member (would need another user)
-    # This is a simplified test - in reality you'd create another user first
+    # Add member via invite
     response = client.post(
-        f"/api/workspaces/{workspace_id}/members",
+        f"/api/workspaces/{workspace_id}/invites",
         data=json.dumps({
             "email": "member@example.com",
             "role": "editor",

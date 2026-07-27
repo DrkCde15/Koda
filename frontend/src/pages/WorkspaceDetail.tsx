@@ -7,13 +7,16 @@ import { pageService } from "@/services/pages";
 import { databaseService, TASKS_PRESET } from "@/services/databases";
 import { fileService } from "@/services/files";
 import { searchService } from "@/services/search";
+import { activityService } from "@/services/activity";
 import { Database, ROLES } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/contexts/ToastContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { getErrorMessage } from "@/utils/error";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { PresenceAvatars } from "@/components/PresenceAvatars";
 
-type Tab = "pages" | "favorites" | "trash" | "databases" | "files" | "members";
+type Tab = "pages" | "favorites" | "trash" | "databases" | "files" | "members" | "activity";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -74,6 +77,18 @@ export function WorkspaceDetailPage() {
     queryKey: ["search", workspaceId, searchTerm],
     queryFn: () => searchService.search(workspaceId, searchTerm),
     enabled: searchTerm.trim().length > 0,
+  });
+
+  const { data: presences = [] } = useQuery({
+    queryKey: ["presence", workspaceId],
+    queryFn: () => activityService.listPresence(workspaceId),
+    refetchInterval: 30_000,
+  });
+
+  const { data: activities = [] } = useQuery({
+    queryKey: ["activity", workspaceId],
+    queryFn: () => activityService.listActivity(workspaceId),
+    refetchInterval: 60_000,
   });
 
   const isOwner = useMemo(
@@ -244,10 +259,13 @@ export function WorkspaceDetailPage() {
   return (
     <div className="p-4 sm:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">
-          <span className="mr-2">{ws?.icon || "📁"}</span>
-          {ws?.name}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">
+            <span className="mr-2">{ws?.icon || "📁"}</span>
+            {ws?.name}
+          </h1>
+          <PresenceAvatars presences={presences} />
+        </div>
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary" onClick={handleNewPage} disabled={createPage.isPending}>
             + Nova página
@@ -331,7 +349,7 @@ export function WorkspaceDetailPage() {
       ) : (
         <>
           <div className="mb-4 flex flex-wrap gap-4 border-b border-gray-200 text-sm dark:border-gray-700">
-            {(["pages", "favorites", "trash", "databases", "files", "members"] as Tab[]).map((t) => (
+            {(["pages", "favorites", "trash", "databases", "files", "members", "activity"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -351,6 +369,8 @@ export function WorkspaceDetailPage() {
                   ? "Bancos"
                   : t === "files"
                   ? "Arquivos"
+                  : t === "activity"
+                  ? "Atividade"
                   : "Membros"}
               </button>
             ))}
@@ -629,6 +649,15 @@ export function WorkspaceDetailPage() {
                   </ul>
                 </div>
               )}
+            </div>
+          )}
+
+          {tab === "activity" && (
+            <div>
+              <h2 className="mb-4 text-sm font-medium text-gray-500 dark:text-gray-300">
+                Atividade recente do workspace
+              </h2>
+              <ActivityFeed activities={activities} />
             </div>
           )}
         </>

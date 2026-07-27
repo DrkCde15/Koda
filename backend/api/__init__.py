@@ -12,6 +12,7 @@ from werkzeug.exceptions import HTTPException
 
 from config import get_config
 from config.logging_config import configure_logging, get_logger
+import extensions
 from extensions import cors, db, jwt, migrate, redis_client
 from middlewares.errors import errors_bp
 from middlewares.jwt_handlers import check_if_token_revoked
@@ -38,9 +39,9 @@ def create_app(env: str = None) -> Flask:
     configure_logging(app)
 
     _init_extensions(app)
+    _init_rate_limiter(app)
     _register_blueprints(app)
     _register_jwt_handlers()
-    _init_rate_limiter(app)
     _register_spa(app)
     _register_error_handlers(app)
     _register_health_check(app)
@@ -61,14 +62,16 @@ def _init_extensions(app: Flask) -> None:
     jwt.init_app(app)
     cors.init_app(app, origins=app.config["CORS_ORIGINS"])
 
-    global redis_client
     try:
-        redis_client = __import__("redis").from_url(
+        conn = __import__("redis").from_url(
             app.config["REDIS_URL"], decode_responses=True
         )
-        redis_client.ping()
+        conn.ping()
+        extensions.redis_client = conn
+        redis_client = conn
         logger.info("Redis connected successfully")
     except Exception as exc:  # pragma: no cover - depends on infra
+        extensions.redis_client = None
         redis_client = None
         logger.warning(
             "Redis indisponível (%s). Rodando em modo degradado: revogação de "
@@ -86,6 +89,8 @@ def _register_blueprints(app: Flask) -> None:
     from api.files.files import files_bp
     from api.search.search import search_bp
     from api.databases.databases import databases_bp
+    from api.comments.comments import comments_bp
+    from api.activity.activity import activity_bp
     from api.docs import register_docs
 
     app.register_blueprint(errors_bp)
@@ -97,6 +102,8 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(files_bp, url_prefix="/api/files")
     app.register_blueprint(search_bp, url_prefix="/api/search")
     app.register_blueprint(databases_bp, url_prefix="/api/databases")
+    app.register_blueprint(comments_bp, url_prefix="/api")
+    app.register_blueprint(activity_bp, url_prefix="/api")
     
     # Register API documentation
     register_docs(app)

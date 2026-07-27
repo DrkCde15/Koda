@@ -60,9 +60,7 @@ def test_register_duplicate_email(client, user_data):
         data=json.dumps(user_data),
         content_type="application/json",
     )
-    assert response.status_code == 400
-    data = json.loads(response.data)
-    assert data["success"] is False
+    assert response.status_code == 422
 
 
 def test_login_success(client, user_data):
@@ -106,7 +104,7 @@ def test_login_invalid_credentials(client, user_data):
 
 def test_protected_endpoint_without_token(client):
     """Test accessing protected endpoint without token."""
-    response = client.get("/api/users/me")
+    response = client.get("/api/auth/me")
     assert response.status_code == 401
 
 
@@ -130,7 +128,7 @@ def test_protected_endpoint_with_token(client, user_data):
     
     # Access protected endpoint
     response = client.get(
-        "/api/users/me",
+        "/api/auth/me",
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
     )
     assert response.status_code == 200

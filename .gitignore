@@ -54,6 +54,7 @@ frontend/coverage/
 
 # Testes
 .coverage
+*coverage.xml
 htmlcov/
 .pytest_cache/
 tests/reports/

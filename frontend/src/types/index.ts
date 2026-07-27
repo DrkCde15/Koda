@@ -76,6 +76,33 @@ export interface PageRevision {
   created_at?: string;
 }
 
+export interface Comment {
+  id: number;
+  page_id: number;
+  user_id: number;
+  body: string;
+  mentions: string[];
+  created_at?: string;
+  updated_at?: string;
+  author?: {
+    id: number;
+    full_name: string;
+    avatar_url?: string | null;
+  } | null;
+}
+
+export interface NotificationItem {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  body: string;
+  entity_type?: string | null;
+  entity_id?: number | null;
+  is_read: boolean;
+  created_at?: string;
+}
+
 export interface Block {
   id: number;
   page_id: number;
@@ -133,6 +160,36 @@ export interface AuthData {
   user: User;
   access_token: string;
   refresh_token: string;
+}
+
+export interface Presence {
+  id: number;
+  workspace_id: number;
+  page_id: number;
+  user_id: number;
+  status: string;
+  last_seen_at: string;
+  user: {
+    id: number;
+    full_name: string;
+    avatar_url?: string | null;
+  };
+}
+
+export interface Activity {
+  id: number;
+  workspace_id: number;
+  user_id: number;
+  action: string;
+  message: string;
+  entity_type?: string | null;
+  entity_id?: number | null;
+  created_at: string;
+  user: {
+    id: number;
+    full_name: string;
+    avatar_url?: string | null;
+  } | null;
 }
 
 export const ROLES = ["owner", "admin", "editor", "viewer"] as const;

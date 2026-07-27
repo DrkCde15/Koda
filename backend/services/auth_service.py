@@ -9,7 +9,7 @@ import jwt as pyjwt
 from flask import current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
 
-from extensions import redis_client
+import extensions
 from models.user import User
 from repositories.user_repository import UserRepository
 from services.email_service import send_email
@@ -70,8 +70,8 @@ class AuthService:
             _reset_secret(),  # short-lived, stored in Redis by id
             algorithm="HS256",
         )
-        if redis_client is not None:
-            redis_client.setex(f"reset:{token}", RESET_TTL_SECONDS, str(user.id))
+        if extensions.redis_client is not None:
+            extensions.redis_client.setex(f"reset:{token}", RESET_TTL_SECONDS, str(user.id))
         frontend_url = current_app.config.get("FRONTEND_URL", "http://localhost")
         reset_link = f"{frontend_url.rstrip('/')}/reset-password?token={token}"
         send_email(
@@ -90,8 +90,8 @@ class AuthService:
 
     @staticmethod
     def reset_password(token: str, new_password: str) -> None:
-        if redis_client is not None:
-            user_id = redis_client.get(f"reset:{token}")
+        if extensions.redis_client is not None:
+            user_id = extensions.redis_client.get(f"reset:{token}")
             if user_id is None:
                 raise AuthError("Invalid or expired reset token")
         else:
@@ -108,8 +108,8 @@ class AuthService:
             raise AuthError("User not found")
         user.password = new_password
         UserRepository.update(user)
-        if redis_client is not None:
-            redis_client.delete(f"reset:{token}")
+        if extensions.redis_client is not None:
+            extensions.redis_client.delete(f"reset:{token}")
 
     @staticmethod
     def update_profile(user: User, full_name: Optional[str], avatar_url: Optional[str]) -> User:

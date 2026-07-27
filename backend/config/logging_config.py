@@ -39,7 +39,7 @@ def configure_logging(app: Flask):
     """Configure structured logging for the Flask application."""
     
     log_level = getattr(logging, app.config.get("LOG_LEVEL", "INFO").upper())
-    log_format = app.config.get("LOG_FORMAT", "json")
+    log_format = app.config.get("LOG_FORMAT", "text")
     
     # Remove existing handlers
     app.logger.handlers.clear()
@@ -65,7 +65,7 @@ def configure_logging(app: Flask):
     app.logger.setLevel(log_level)
     
     # Configure third-party loggers
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    logging.getLogger("werkzeug").setLevel(logging.INFO)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("redis").setLevel(logging.WARNING)
     

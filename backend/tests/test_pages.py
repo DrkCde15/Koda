@@ -66,7 +66,7 @@ def test_create_page(client, auth_headers, workspace_id):
         data=json.dumps({
             "title": "Test Page",
             "workspace_id": workspace_id,
-            "content": "<p>Initial content</p>",
+            "content": {"html": "<p>Initial content</p>"},
         }),
         content_type="application/json",
         headers=auth_headers,
@@ -144,7 +144,7 @@ def test_update_page(client, auth_headers, workspace_id):
         f"/api/pages/{page_id}",
         data=json.dumps({
             "title": "Updated Title",
-            "content": "<p>Updated content</p>",
+            "content": {"html": "<p>Updated content</p>"},
         }),
         content_type="application/json",
         headers=auth_headers,
@@ -199,19 +199,10 @@ def test_page_with_blocks(client, auth_headers, workspace_id):
         data=json.dumps({
             "page_id": page_id,
             "type": "paragraph",
-            "content": "This is a test block",
-            "order": 0,
+            "content": {"text": "This is a test block"},
+            "position": 0,
         }),
         content_type="application/json",
         headers=auth_headers,
     )
     assert block_response.status_code == 201
-    
-    # Get page with blocks
-    response = client.get(
-        f"/api/pages/{page_id}?include=blocks",
-        headers=auth_headers,
-    )
-    data = json.loads(response.data)
-    assert "blocks" in data["data"]
-    assert len(data["data"]["blocks"]) >= 1

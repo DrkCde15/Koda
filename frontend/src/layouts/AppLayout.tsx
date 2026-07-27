@@ -1,10 +1,11 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { workspaceService } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useThemeStore } from "@/store/themeStore";
+import { commentService } from "@/services/pages";
 
 function ThemeToggle() {
   const theme = useThemeStore((s) => s.theme);
@@ -53,14 +54,29 @@ function ThemeToggle() {
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showNotifications, setShowNotifications] = useState(false);
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
     queryFn: () => workspaceService.list(),
   });
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => commentService.listNotifications(),
+    staleTime: 0,
+  });
+
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
+  };
+
+  const unreadCount = notifications.filter((item) => !item.is_read).length;
+
+  const handleReadNotification = async (id: number) => {
+    await commentService.markNotificationRead(id);
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
   return (
@@ -108,6 +124,46 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             Olá, {user?.full_name?.split(" ")[0] ?? "usuário"}
           </span>
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowNotifications((value) => !value)}
+                className="btn-ghost h-9 rounded-md px-3 text-sm"
+              >
+                🔔 {unreadCount > 0 ? `(${unreadCount})` : ""}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold">Notificações</span>
+                    <button className="text-xs text-brand-600" onClick={() => setShowNotifications(false)}>
+                      Fechar
+                    </button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhuma notificação ainda.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {notifications.slice(0, 6).map((item) => (
+                        <li key={item.id} className="rounded-md border border-gray-200 p-2 text-sm dark:border-gray-700">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-medium">{item.title}</p>
+                              <p className="text-gray-500 dark:text-gray-400">{item.body}</p>
+                            </div>
+                            {!item.is_read && (
+                              <button className="text-xs text-brand-600" onClick={() => handleReadNotification(item.id)}>
+                                Marcar lida
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
             <ThemeToggle />
             <Link to="/profile" className="btn-ghost h-9 rounded-md px-3 text-sm">
               Perfil

@@ -3,6 +3,7 @@
 Thin layer: validates input, delegates to AuthService and returns the
 standard API envelope. No business logic lives here.
 """
+import os
 from flask import Blueprint, current_app, request
 from flask_jwt_extended import (
     get_jwt,
@@ -29,18 +30,20 @@ from services.auth_service import AuthError, AuthService
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-# Initialize limiter (will be set by init_app)
-limiter = None
+limiter = Limiter(key_func=get_remote_address)
 
 
-def init_limiter(app_limiter):
+def init_limiter(app):
     """Initialize the limiter for this blueprint."""
     global limiter
-    limiter = app_limiter
+    import extensions
+    if extensions.redis_client and not app.config.get("RATELIMIT_STORAGE_URI"):
+        app.config["RATELIMIT_STORAGE_URI"] = os.getenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/1")
+    limiter.init_app(app)
 
 
 @auth_bp.post("/register")
-@limiter.limit(rate_limit_register() if limiter else "3 per hour")
+@limiter.limit(rate_limit_register())
 def register():
     data = RegisterSchema().load(request.get_json(force=True, silent=True) or {})
     user, access, refresh = AuthService.register(
@@ -54,7 +57,7 @@ def register():
 
 
 @auth_bp.post("/login")
-@limiter.limit(rate_limit_login() if limiter else "5 per minute")
+@limiter.limit(rate_limit_login())
 def login():
     data = LoginSchema().load(request.get_json(force=True, silent=True) or {})
     user = AuthService.authenticate(data["email"], data["password"])
@@ -134,7 +137,7 @@ def change_password():
 
 
 @auth_bp.post("/forgot-password")
-@limiter.limit(rate_limit_password_reset() if limiter else "3 per hour")
+@limiter.limit(rate_limit_password_reset())
 def forgot_password():
     data = ForgotPasswordSchema().load(request.get_json(force=True, silent=True) or {})
     token = AuthService.forgot_password(data["email"])
@@ -147,7 +150,7 @@ def forgot_password():
 
 
 @auth_bp.post("/reset-password")
-@limiter.limit(rate_limit_password_reset() if limiter else "3 per hour")
+@limiter.limit(rate_limit_password_reset())
 def reset_password():
     data = ResetPasswordSchema().load(request.get_json(force=True, silent=True) or {})
     try:

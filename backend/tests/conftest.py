@@ -7,6 +7,8 @@ configuration picks up the ephemeral database.
 import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("TEST_DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("RATELIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key-please-override-32")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-please-override-32")
 

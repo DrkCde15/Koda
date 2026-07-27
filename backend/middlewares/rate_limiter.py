@@ -2,10 +2,11 @@
 
 Provides DDoS protection and API abuse prevention with Redis-backed storage.
 """
+import os
 from flask import Flask, request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from extensions import redis_client
+import extensions
 
 
 def create_limiter(app: Flask) -> Limiter:
@@ -15,20 +16,22 @@ def create_limiter(app: Flask) -> Limiter:
     Falls back to in-memory storage in development if Redis is unavailable.
     """
     # Storage backend
-    if redis_client:
-        storage_uri = app.config.get("RATELIMIT_STORAGE_URL", "redis://localhost:6379/1")
-    else:
-        storage_uri = "memory://"
-        app.logger.warning(
-            "Redis unavailable. Using in-memory rate limiting "
-            "(not suitable for multi-worker deployments)."
-        )
+    storage_uri = os.getenv("RATELIMIT_STORAGE_URI")
+    if storage_uri is None:
+        if extensions.redis_client:
+            storage_uri = app.config.get("RATELIMIT_STORAGE_URI", "redis://localhost:6379/1")
+        else:
+            storage_uri = "memory://"
+            app.logger.warning(
+                "Redis unavailable. Using in-memory rate limiting "
+                "(not suitable for multi-worker deployments)."
+            )
 
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
         storage_uri=storage_uri,
-        default_limits=[app.config.get("RATELIMIT_DEFAULT", "100 per hour")],
+        default_limits=[os.getenv("RATELIMIT_DEFAULT", "200 per hour")],
         strategy="fixed-window",
         headers_enabled=True,
     )
@@ -46,29 +49,28 @@ def init_rate_limiter(app: Flask):
     """Initialize rate limiter with custom limits per endpoint."""
     limiter = create_limiter(app)
 
-    # Apply specific limits to sensitive endpoints
-    # These will be imported and used in the route definitions
-    
+    from api.auth.auth import init_limiter as auth_init_limiter
+    auth_init_limiter(app)
+
     return limiter
 
 
 # Decorators for common rate limit rules
 def rate_limit_login():
-    """Rate limit for login attempts: 5 per minute."""
-    from flask_limiter import Limiter
-    return "5 per minute"
+    """Rate limit for login attempts."""
+    return os.getenv("RATELIMIT_LOGIN", "20 per minute")
 
 
 def rate_limit_register():
-    """Rate limit for registration: 3 per hour."""
-    return "3 per hour"
+    """Rate limit for registration."""
+    return os.getenv("RATELIMIT_REGISTER", "10 per minute")
 
 
 def rate_limit_password_reset():
-    """Rate limit for password reset requests: 3 per hour."""
-    return "3 per hour"
+    """Rate limit for password reset requests."""
+    return os.getenv("RATELIMIT_PASSWORD_RESET", "5 per minute")
 
 
 def rate_limit_api():
-    """General API rate limit: 100 per hour."""
-    return "100 per hour"
+    """General API rate limit."""
+    return os.getenv("RATELIMIT_DEFAULT", "200 per hour")

@@ -1,4 +1,4 @@
-import { ApiResponse, Block, Page, PageRevision } from "@/types";
+import { ApiResponse, Block, Comment, NotificationItem, Page, PageRevision } from "@/types";
 import api from "@/lib/axios";
 
 export const pageService = {
@@ -53,6 +53,28 @@ export const pageService = {
   async history(id: number): Promise<PageRevision[]> {
     const { data } = await api.get<ApiResponse<PageRevision[]>>(`/pages/${id}/history`);
     return data.data as PageRevision[];
+  },
+};
+
+export const commentService = {
+  async list(pageId: number): Promise<Comment[]> {
+    const { data } = await api.get<ApiResponse<Comment[]>>(`/pages/${pageId}/comments`);
+    return data.data as Comment[];
+  },
+
+  async create(pageId: number, payload: { body: string; mentions?: string[] }): Promise<{ comments: Comment[] }> {
+    const { data } = await api.post<ApiResponse<{ comments: Comment[] }>>(`/pages/${pageId}/comments`, payload);
+    return data.data as { comments: Comment[] };
+  },
+
+  async listNotifications(): Promise<NotificationItem[]> {
+    const { data } = await api.get<ApiResponse<NotificationItem[]>>("/notifications");
+    return data.data as NotificationItem[];
+  },
+
+  async markNotificationRead(id: number): Promise<NotificationItem> {
+    const { data } = await api.post<ApiResponse<NotificationItem>>(`/notifications/${id}/read`);
+    return data.data as NotificationItem;
   },
 };
 

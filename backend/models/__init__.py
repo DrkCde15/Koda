@@ -8,6 +8,8 @@ from models.workspace_models import Invite, Workspace, WorkspaceMember
 from models.page import Page, PageRevision
 from models.block import Block, BlockType
 from models.file import File
+from models.comment import Notification, PageComment
+from models.activity import PagePresence, WorkspaceActivity
 from models.database_models import (
     Database,
     DatabaseItem,
@@ -30,4 +32,8 @@ __all__ = [
     "DatabaseProperty",
     "DatabaseItem",
     "DatabaseItemValue",
+    "PageComment",
+    "Notification",
+    "PagePresence",
+    "WorkspaceActivity",
 ]
