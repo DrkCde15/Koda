@@ -4,6 +4,7 @@ Owns token issuance, password hashing orchestration and reset-token state.
 Repositories handle persistence; this layer enforces rules and workflows.
 """
 from typing import Optional, Tuple
+from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
 from flask import current_app
@@ -66,7 +67,11 @@ class AuthService:
         if user is None:
             return None
         token = pyjwt.encode(
-            {"sub": str(user.id), "purpose": "reset"},
+            {
+                "sub": str(user.id),
+                "purpose": "reset",
+                "exp": datetime.now(timezone.utc) + timedelta(seconds=RESET_TTL_SECONDS),
+            },
             _reset_secret(),  # short-lived, stored in Redis by id
             algorithm="HS256",
         )

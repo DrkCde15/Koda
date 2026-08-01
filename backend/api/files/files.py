@@ -50,7 +50,11 @@ def download(workspace_id: int, filename: str):
     path = FileService.get_path(workspace_id, filename)
     if not os.path.exists(path):
         return error("File not found", None, 404)
-    return send_file(path)
+    response = send_file(path)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    if filename.lower().endswith(".svg"):
+        response.headers["Content-Disposition"] = "attachment"
+    return response
 
 
 @files_bp.delete("/<int:file_id>")

@@ -13,7 +13,7 @@ from services.exceptions import ServiceError
 
 class FileService:
     ALLOWED_EXTENSIONS = {
-        "png", "jpg", "jpeg", "gif", "webp", "svg", "pdf",
+        "png", "jpg", "jpeg", "gif", "webp", "pdf",
         "txt", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "zip",
     }
 
