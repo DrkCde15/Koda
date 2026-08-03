@@ -140,6 +140,55 @@ function ImageView({ node }: NodeViewProps) {
   );
 }
 
+function PageLinkView({ node }: NodeViewProps) {
+  const navigate = useNavigate();
+  const pageId = node.attrs.pageId as number | null;
+  const title = (node.attrs.title as string) || "Página";
+  const icon = (node.attrs.icon as string) || "📄";
+  return (
+    <NodeViewWrapper>
+      <button
+        type="button"
+        contentEditable={false}
+        className="my-1 inline-flex items-center gap-1.5 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-brand-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:text-brand-300 dark:hover:bg-gray-800"
+        onClick={() => {
+          if (pageId) navigate(`/pages/${pageId}`);
+        }}
+      >
+        <span>{icon}</span>
+        <span className="font-medium underline decoration-dotted underline-offset-2">
+          {title}
+        </span>
+        <span className="text-xs text-gray-400">↗</span>
+      </button>
+    </NodeViewWrapper>
+  );
+}
+
+export const PageLinkNode = Node.create({
+  name: "pagelink",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      pageId: { default: null },
+      title: { default: "" },
+      icon: { default: "📄" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "span[data-pagelink]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes({ "data-pagelink": "" }, HTMLAttributes)];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(PageLinkView);
+  },
+});
+
 export const ImageNode = Node.create({
   name: "image",
   group: "block",
@@ -229,5 +278,32 @@ export const FileNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(FileView);
+  },
+});
+
+export const MentionNode = Node.create({
+  name: "mention",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      id: { default: null },
+      label: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "span[data-mention]" }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return [
+      "span",
+      mergeAttributes({ "data-mention": "" }, HTMLAttributes),
+      `@${node.attrs.label}`,
+    ];
+  },
+  renderText({ node }) {
+    return `@${node.attrs.label}`;
   },
 });

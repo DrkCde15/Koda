@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { pageService, blockService, commentService } from "@/services/pages";
+import { pageService, blockService } from "@/services/pages";
 import { activityService } from "@/services/activity";
-import { Block, Comment, Page } from "@/types";
+import { Block, Page } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/contexts/ToastContext";
 import { getErrorMessage } from "@/utils/error";
@@ -31,12 +31,6 @@ export function PageViewPage() {
     staleTime: 0,
   });
 
-  const { data: comments = [], isLoading: isCommentsLoading } = useQuery({
-    queryKey: ["comments", pageId],
-    queryFn: () => commentService.list(pageId),
-    staleTime: 0,
-  });
-
   const { data: presences = [] } = useQuery({
     queryKey: ["presence", page?.workspace_id],
     queryFn: () => activityService.listPresence(page!.workspace_id),
@@ -58,9 +52,6 @@ export function PageViewPage() {
 
   const pagePresences = presences.filter((p) => p.page_id === pageId);
 
-  const [commentBody, setCommentBody] = useState("");
-  const [mentionDraft, setMentionDraft] = useState("");
-
   const updatePage = useMutation({
     mutationFn: (payload: Partial<Page>) => pageService.update(pageId, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["page", pageId] }),
@@ -76,26 +67,7 @@ export function PageViewPage() {
     },
   });
 
-  const createComment = useMutation({
-    mutationFn: (payload: { body: string; mentions?: string[] }) => commentService.create(pageId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", pageId] });
-      setCommentBody("");
-      setMentionDraft("");
-      toast.push("Comentário enviado", "success");
-    },
-    onError: (err) => toast.push(getErrorMessage(err), "error"),
-  });
-
-  const mentionList = useMemo(() => {
-    const rawMentions = mentionDraft
-      .split(/[,\n]/)
-      .flatMap((item) => item.match(/@([\w\s.-]+)/g) || [])
-      .map((item) => item.replace(/^@/, "").trim());
-    return rawMentions.filter(Boolean);
-  }, [mentionDraft]);
-
-  if (isLoading || isBlocksLoading || isCommentsLoading) return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
+  if (isLoading || isBlocksLoading) return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
   if (!page) return <div className="p-8 text-gray-500 dark:text-gray-300">Página não encontrada.</div>;
 
   return (
@@ -134,7 +106,7 @@ export function PageViewPage() {
         key={`title-${pageId}`}
         id={`page-title-${pageId}`}
         name="page-title"
-        className="mb-6 w-full border-none bg-transparent text-3xl font-bold text-gray-900 outline-none dark:bg-transparent dark:text-white"
+        className="mb-6 w-full border-none bg-transparent text-3xl font-bold tracking-tight text-zinc-900 outline-none dark:bg-transparent dark:text-white"
         defaultValue={page.title}
         onBlur={(e) => {
           const next = e.target.value.trim() || "Sem título";
@@ -142,54 +114,6 @@ export function PageViewPage() {
           if (next !== page.title) updatePage.mutate({ title: next });
         }}
       />
-
-      <div className="mt-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-3 text-lg font-semibold">Comentários</h2>
-        <textarea
-          className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none dark:border-gray-700 dark:bg-gray-950"
-          rows={3}
-          placeholder="Escreva um comentário e mencione alguém com @nome"
-          value={commentBody}
-          onChange={(e) => setCommentBody(e.target.value)}
-        />
-        <input
-          className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm outline-none dark:border-gray-700 dark:bg-gray-950"
-          placeholder="Mencione(s) separadas por vírgula ou escreva @nome no corpo"
-          value={mentionDraft}
-          onChange={(e) => setMentionDraft(e.target.value)}
-        />
-        <div className="mt-3 flex items-center justify-between">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {mentionList.length > 0 ? `Mentions: ${mentionList.join(", ")}` : "Nenhuma menção ainda"}
-          </p>
-          <button
-            className="btn-primary"
-            onClick={() => createComment.mutate({ body: commentBody, mentions: mentionList })}
-            disabled={createComment.isPending || !commentBody.trim()}
-          >
-            Enviar
-          </button>
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {comments.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Ainda não há comentários.</p>
-          ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-950/60">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-medium">{comment.author?.full_name || "Usuário"}</span>
-                  <span className="text-xs text-gray-500">{comment.created_at?.slice(0, 10)}</span>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-200">{comment.body}</p>
-                {comment.mentions?.length > 0 && (
-                  <p className="mt-2 text-xs text-brand-600">Menções: {comment.mentions.join(", ")}</p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
 
       <BlockEditor
         key={`editor-${pageId}`}

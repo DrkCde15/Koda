@@ -31,25 +31,26 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <h1 className="mb-4 text-lg font-semibold">Entrar</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <h1 className="mb-1 text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Entrar</h1>
+      <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">Bem-vindo de volta ao Koda.</p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm">Email</label>
-          <input className="input" type="email" {...register("email", { required: true })} />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
+          <input className="input" type="email" placeholder="voce@empresa.com" {...register("email", { required: true })} />
         </div>
         <div>
-          <label className="mb-1 block text-sm">Senha</label>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Senha</label>
           <PasswordInput {...register("password", { required: true })} />
         </div>
         <button className="btn-primary w-full" type="submit">
           Entrar
         </button>
       </form>
-      <div className="mt-4 flex justify-between text-sm">
-        <Link to="/forgot-password" className="text-brand-600 hover:underline">
+      <div className="mt-5 flex justify-between text-sm">
+        <Link to="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700">
           Esqueceu a senha?
         </Link>
-        <Link to="/register" className="text-brand-600 hover:underline">
+        <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
           Criar conta
         </Link>
       </div>

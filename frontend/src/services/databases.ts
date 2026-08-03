@@ -1,4 +1,4 @@
-import { ApiResponse, Database, DatabaseItem, DatabaseProperty } from "@/types";
+import { ApiResponse, Database, DatabaseItem, DatabaseProperty, FilterRule, SortRule } from "@/types";
 import api from "@/lib/axios";
 
 export interface CreateDatabasePayload {
@@ -21,8 +21,20 @@ export const databaseService = {
     return (data.data as Database[]) || [];
   },
 
-  async get(databaseId: number): Promise<Database> {
-    const { data } = await api.get<ApiResponse<Database>>(`/databases/${databaseId}`);
+  async get(
+    databaseId: number,
+    options?: { filters?: FilterRule[]; sorts?: SortRule[] }
+  ): Promise<Database> {
+    const params: Record<string, string> = {};
+    if (options?.filters?.length) {
+      params.filter = JSON.stringify(options.filters);
+    }
+    if (options?.sorts?.length) {
+      params.sort = JSON.stringify(options.sorts);
+    }
+    const { data } = await api.get<ApiResponse<Database>>(`/databases/${databaseId}`, {
+      params,
+    });
     return data.data as Database;
   },
 

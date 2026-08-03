@@ -30,6 +30,20 @@ def list_comments(page_id: int):
     return success("Comments retrieved", comments)
 
 
+@comments_bp.post("/pages/<int:page_id>/mentions")
+@jwt_required()
+def notify_mentions(page_id: int):
+    """Notify users mentioned inline in a page document."""
+    user = get_current_user()
+    payload = request.get_json(force=True, silent=True) or {}
+    mentions = [m for m in (payload.get("mentions") or []) if m and m.strip()]
+    if not mentions:
+        return error("Mentions are required", None, 400)
+
+    notifications = CommentService.notify_mentions(user.id, page_id, mentions)
+    return success("Mentions notified", {"notified": notifications}, 201)
+
+
 @comments_bp.get("/notifications")
 @jwt_required()
 def list_notifications():

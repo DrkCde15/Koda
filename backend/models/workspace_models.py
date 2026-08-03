@@ -80,7 +80,17 @@ class Invite(db.Model, PKMixin, TimestampMixin):
     workspace = db.relationship("Workspace")
 
     def is_expired(self) -> bool:
-        return utcnow() > self.expires_at
+        now = utcnow()
+        expires = self.expires_at
+        if expires is None:
+            return True
+        # SQLite stores naive datetimes; make both sides equally aware so the
+        # comparison works regardless of the underlying database.
+        if expires.tzinfo is None and now.tzinfo is not None:
+            expires = expires.replace(tzinfo=now.tzinfo)
+        elif now.tzinfo is None and expires.tzinfo is not None:
+            now = now.replace(tzinfo=expires.tzinfo)
+        return now > expires
 
     def to_dict(self) -> dict:
         return {

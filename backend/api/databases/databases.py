@@ -4,11 +4,18 @@ Thin layer: validates input, delegates to the service and returns the standard
 envelope. Domain errors raised by the service are translated by the global
 error handler in ``middlewares/errors.py``.
 """
+import json
+
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
+from marshmallow import ValidationError
 
 from middlewares.auth import get_current_user
-from middlewares.responses import success
+from middlewares.responses import error, success
+from schemas.database_schema import (
+    DatabaseFilterSchema,
+    DatabaseSortSchema,
+)
 from services.database_service import (
     add_item,
     add_property,
@@ -24,6 +31,26 @@ from services.database_service import (
 )
 
 databases_bp = Blueprint("databases", __name__, url_prefix="/databases")
+
+
+def _parse_query_list(name: str) -> list | None:
+    raw = request.args.get(name)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raise ValidationError(f"{name} must be valid JSON")
+
+
+def _validate_filters_sorts() -> tuple[list | None, list | None]:
+    filters = _parse_query_list("filter")
+    sorts = _parse_query_list("sort")
+    if filters is not None:
+        filters = DatabaseFilterSchema(many=True).load(filters)
+    if sorts is not None:
+        sorts = DatabaseSortSchema(many=True).load(sorts)
+    return filters, sorts
 
 
 @databases_bp.post("")
@@ -47,7 +74,8 @@ def list_for_workspace(workspace_id: int):
 @jwt_required()
 def get_one(database_id: int):
     user = get_current_user()
-    database = get_database(user.id, database_id)
+    filters, sorts = _validate_filters_sorts()
+    database = get_database(user.id, database_id, filters, sorts)
     return success("Database retrieved", database)
 
 

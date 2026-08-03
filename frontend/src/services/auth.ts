@@ -109,6 +109,11 @@ export const workspaceService = {
     await api.delete(`/workspaces/${id}/members/${userId}`);
   },
 
+  async listMembers(id: number): Promise<WorkspaceMember[]> {
+    const { data } = await api.get<ApiResponse<WorkspaceMember[]>>(`/workspaces/${id}/members`);
+    return (data.data as WorkspaceMember[]) || [];
+  },
+
   async acceptInvite(token: string): Promise<Workspace> {
     const { data } = await api.post<ApiResponse<Workspace>>("/workspaces/invites/accept", {
       token,

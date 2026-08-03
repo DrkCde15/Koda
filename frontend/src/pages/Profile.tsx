@@ -72,27 +72,32 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold">Meu perfil</h1>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">Meu perfil</h1>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Gerencie suas informações e credenciais.
+        </p>
+      </div>
 
       <div className="card">
         {isLoading || !user ? (
-          <p className="text-sm text-gray-500 dark:text-gray-300">Carregando…</p>
+          <p className="text-sm text-zinc-500">Carregando…</p>
         ) : (
-          <form onSubmit={handleProfile(onSaveProfile)} className="space-y-3">
+          <form onSubmit={handleProfile(onSaveProfile)} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
               <input className="input" value={user.email} disabled />
             </div>
             <div>
-              <label className="mb-1 block text-sm">Nome</label>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Nome</label>
               <input
                 className="input"
                 {...registerProfile("full_name", { required: true })}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm">URL do avatar</label>
-              <input className="input" {...registerProfile("avatar_url")} />
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">URL do avatar</label>
+              <input className="input" placeholder="https://…" {...registerProfile("avatar_url")} />
             </div>
             <button
               type="submit"
@@ -106,10 +111,10 @@ export function ProfilePage() {
       </div>
 
       <div className="card">
-        <h2 className="mb-3 font-medium">Alterar senha</h2>
-        <form onSubmit={handlePassword(onSavePassword)} className="space-y-3">
+        <h2 className="mb-3 font-semibold tracking-tight">Alterar senha</h2>
+        <form onSubmit={handlePassword(onSavePassword)} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm">Senha atual</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Senha atual</label>
             <input
               className="input"
               type="password"
@@ -117,7 +122,7 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm">Nova senha</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Nova senha</label>
             <input
               className="input"
               type="password"
@@ -125,7 +130,7 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm">Confirmar nova senha</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Confirmar nova senha</label>
             <input
               className="input"
               type="password"

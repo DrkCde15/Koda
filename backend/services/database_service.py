@@ -1,9 +1,15 @@
 """Business logic for Notion-style databases."""
 from datetime import datetime, timezone
+from functools import cmp_to_key
 
 from extensions import db
 from middlewares.permissions import assert_manager, assert_member
-from models.database_models import Database, DatabaseItemValue, DatabaseProperty
+from models.database_models import (
+    Database,
+    DatabaseItem,
+    DatabaseItemValue,
+    DatabaseProperty,
+)
 from repositories.database_repository import DatabaseRepository
 from schemas.database_schema import (
     DatabaseCreateSchema,
@@ -62,36 +68,169 @@ def _build_value_record(item_id: int, prop: DatabaseProperty, raw_value) -> dict
     }
 
 
-def _serialize_database(database: Database, include_items: bool = False) -> dict:
+def _serialize_database(
+    database: Database,
+    include_items: bool = False,
+    filters: list | None = None,
+    sorts: list | None = None,
+) -> dict:
     properties = DatabaseRepository.list_properties(database.id)
     result = database.to_dict()
     result["properties"] = [p.to_dict() for p in properties]
     if include_items:
         items = DatabaseRepository.list_items(database.id)
         prop_by_id = {p.id: p for p in properties}
+        values_by_item = _values_by_item(database.id)
         item_dicts = []
         for item in items:
-            values = (
-                db.session.query(DatabaseItemValue)
-                .filter(DatabaseItemValue.item_id == item.id)
-                .all()
-            )
+            values = values_by_item.get(item.id, {})
             cell_map = {}
-            for v in values:
-                prop = prop_by_id.get(v.property_id)
+            for prop_id, v in values.items():
+                prop = prop_by_id.get(prop_id)
                 ptype = prop.type if prop else "text"
-                cell_map[str(v.property_id)] = {
-                    "property_id": v.property_id,
+                cell_map[str(prop_id)] = {
+                    "property_id": prop_id,
                     "type": ptype,
-                    "value": v.value_text
-                    if ptype == "text"
-                    else (v.value_number if ptype == "number" else (v.value_date.isoformat() if v.value_date else v.value_select)),
+                    "value": _cell_value(v, ptype),
                 }
             item_dict = item.to_dict()
             item_dict["values"] = cell_map
             item_dicts.append(item_dict)
+        if filters:
+            item_dicts = [
+                it
+                for it in item_dicts
+                if _matches_filters(prop_by_id, it["values"], filters)
+            ]
+        if sorts:
+            item_dicts.sort(
+                key=cmp_to_key(
+                    lambda a, b: _compare_items(prop_by_id, sorts, a["values"], b["values"])
+                )
+            )
         result["items"] = item_dicts
     return result
+
+
+def _values_by_item(database_id: int) -> dict:
+    rows = (
+        db.session.query(DatabaseItemValue)
+        .join(DatabaseItem, DatabaseItemValue.item_id == DatabaseItem.id)
+        .filter(DatabaseItem.database_id == database_id)
+        .all()
+    )
+    grouped: dict = {}
+    for row in rows:
+        grouped.setdefault(row.item_id, {})[row.property_id] = row
+    return grouped
+
+
+def _cell_value(value: DatabaseItemValue, ptype: str):
+    if ptype == "number":
+        return value.value_number
+    if ptype == "date":
+        return value.value_date.isoformat() if value.value_date else None
+    if ptype in ("select", "status"):
+        return value.value_select
+    return value.value_text
+
+
+def _normalize_for_compare(prop: DatabaseProperty, raw):
+    if raw is None:
+        return None
+    if prop.type == "number":
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+    if prop.type == "date":
+        if isinstance(raw, datetime):
+            return raw
+        try:
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    return str(raw)
+
+
+def _matches_filters(
+    prop_by_id: dict,
+    cell_map: dict,
+    filters: list,
+) -> bool:
+    for f in filters:
+        prop = prop_by_id.get(f["property_id"])
+        if prop is None:
+            continue
+        cell = cell_map.get(str(f["property_id"]))
+        raw = cell["value"] if cell else None
+        value = _normalize_for_compare(prop, raw)
+        target = _normalize_for_compare(prop, f.get("value"))
+        op = f["operator"]
+        empty = value is None or (isinstance(value, str) and not value.strip())
+        if op == "is_empty":
+            if not empty:
+                return False
+        elif op == "is_not_empty":
+            if empty:
+                return False
+        elif empty:
+            return False
+        elif op == "contains":
+            if not isinstance(value, str) or target is None or target not in value:
+                return False
+        elif op == "equals":
+            if value != target:
+                return False
+        elif op == "not_equals":
+            if value == target:
+                return False
+        elif op in ("greater_than", "less_than"):
+            if not isinstance(value, (int, float, datetime)) or not isinstance(
+                target, (int, float, datetime)
+            ):
+                return False
+            if op == "greater_than" and not value > target:
+                return False
+            if op == "less_than" and not value < target:
+                return False
+        elif op in ("after", "before"):
+            if not isinstance(value, datetime) or not isinstance(target, datetime):
+                return False
+            if op == "after" and not value > target:
+                return False
+            if op == "before" and not value < target:
+                return False
+        else:
+            return False
+    return True
+
+
+def _compare_items(prop_by_id: dict, sorts: list, a: dict, b: dict) -> int:
+    """Compare two cell maps by the sort rules; None values always go last."""
+    for s in sorts:
+        prop = prop_by_id.get(s["property_id"])
+        if prop is None:
+            continue
+        key = str(s["property_id"])
+        va = _normalize_for_compare(prop, a.get(key, {}).get("value"))
+        vb = _normalize_for_compare(prop, b.get(key, {}).get("value"))
+        if isinstance(va, str):
+            va = va.lower()
+        if isinstance(vb, str):
+            vb = vb.lower()
+        if va is None and vb is None:
+            continue
+        if va is None:
+            return 1
+        if vb is None:
+            return -1
+        if va == vb:
+            continue
+        if va < vb:
+            return -1 if s["direction"] == "asc" else 1
+        return 1 if s["direction"] == "asc" else -1
+    return 0
 
 
 def create_database(user_id: int, payload: dict) -> dict:
@@ -123,12 +262,19 @@ def list_databases(user_id: int, workspace_id: int) -> list[dict]:
     return [_serialize_database(d) for d in databases]
 
 
-def get_database(user_id: int, database_id: int) -> dict:
+def get_database(
+    user_id: int,
+    database_id: int,
+    filters: list | None = None,
+    sorts: list | None = None,
+) -> dict:
     database = DatabaseRepository.get_by_id(database_id)
     if database is None:
         raise NotFoundError("Database not found")
     assert_member(user_id, database.workspace_id)
-    return _serialize_database(database, include_items=True)
+    return _serialize_database(
+        database, include_items=True, filters=filters or None, sorts=sorts or None
+    )
 
 
 def update_database(user_id: int, database_id: int, payload: dict) -> dict:

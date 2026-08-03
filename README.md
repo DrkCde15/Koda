@@ -18,7 +18,7 @@ escalabilidade.
 | ------------- | ----------------------------------------------------------------- |
 | Frontend      | React, TypeScript, Vite, TailwindCSS, React Router, Axios, TanStack Query, React Hook Form, Zustand |
 | Backend       | Python, Flask, Flask-SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Flask-CORS, Marshmallow, Gunicorn, Flask-Limiter, python-json-logger, flask-swagger-ui |
-| Editor        | TipTap (rich-text + nós customizados: subpágina, tabela, imagem, arquivo) |
+| Editor        | TipTap (rich-text + nós customizados: subpágina, tabela, imagem, arquivo, toggle, colunas, callout, link de página) + slash menu |
 | Banco         | PostgreSQL (com fallback automático para SQLite em dev)          |
 | Cache         | Redis                                                             |
 | Autenticação  | JWT Access + Refresh Token (com revogação via Redis)             |
@@ -76,7 +76,15 @@ frontend/
     services/                    -> chamadas à API
     store/                       -> Zustand (auth, tema)
     contexts/                    -> Toast (feedback), Dialog (modais)
-    components/editorNodes.tsx   -> nós customizados do TipTap (subpágina, tabela, imagem, arquivo)
+    components/editorNodes.tsx   -> nós customizados do TipTap (subpágina, tabela, imagem, arquivo, link de página)
+    components/editorBlocks.tsx  -> blocos customizados (toggle, colunas, callout)
+    components/SlashMenu.tsx     -> menu de inserção via "/" no editor
+    components/KanbanBoard.tsx   -> visão Quadro dos bancos de dados
+    components/RowDetailModal.tsx-> detalhes de um item do banco (modal)
+    components/DatabaseCells.tsx -> células editáveis do grid
+    components/CommandPalette.tsx-> busca global e ações (Ctrl+K)
+    components/Sidebar.tsx       -> sidebar em árvore com seções colapsáveis
+    store/                       -> Zustand (auth, tema, UI/sidebar)
     hooks/ types/ utils/ lib/    -> suporte
   public/
     logo.png                     -> logotipo da marca
@@ -254,9 +262,17 @@ cd backend && pytest --cov --cov-report=html
 
 ### Editor de conteúdo (TipTap)
 - Editor rich-text que consome/gera os blocos da API
+- **Slash menu** (`/` no início de um bloco): inserção rápida de 19 tipos de
+  bloco, emojis (grade de 48), tabelas, subpáginas, imagens e arquivos, tudo
+  no ponto do cursor
 - Blocos tipados: parágrafo, títulos, listas, citação, código, divisor
+- **Blocos extras** (inspirados no AppFlowy):
+  - **Toggle** — bloco recolhível (detalhes/sumário) com aninhamento
+  - **Colunas** — 2 ou 3 colunas para layouts de página
+  - **Callout** — destaque com ícone configurável
 - **Conteúdo embutido no texto** (nós customizados):
   - **Subpáginas** — cria página filha e insere link navegável
+  - **Link de página** — atalho para qualquer página existente do workspace
   - **Tabelas** — embute um banco de dados do workspace (novo ou existente)
   - **Imagens** — upload pelo botão ou colando com **Ctrl+V** (exibidas inline)
   - **Arquivos** — anexo com download; o botão detecta imagens automaticamente
@@ -265,6 +281,12 @@ cd backend && pytest --cov --cov-report=html
 - Bancos de dados relacionais por workspace (propriedades tipadas)
 - Itens (linhas) com valores por propriedade; CRUD completo na UI
 - Preset de Tarefas (título, status, data, responsável)
+- **Visão Tabela (Grid)** com filtros e ordenação por propriedade
+  (backend: `GET /databases/:id?filter=...&sort=...`; operadores: contains,
+  equals, not equals, vazio/não vazio, maior/menor, antes/depois)
+- **Visão Quadro (Kanban)** com drag & drop entre colunas, cores por rótulo
+  e agrupamento por qualquer propriedade select/status
+- **Detalhes da linha** em modal com edição de todos os campos
 
 ### Arquivos
 - Upload com validação de tipo/tamanho e metadados persistidos
@@ -273,12 +295,53 @@ cd backend && pytest --cov --cov-report=html
 
 ### Busca
 - Busca de páginas por título/conteúdo dentro de um workspace
+- **Command palette** (`Ctrl+K` ou `Ctrl+P`): busca global entre workspaces
+  e ações rápidas (nova página, novo banco, tema, perfil)
 
 ### Interface
 - Tema claro/escuro
 - Modais estilizados para prompts/confirmações (sem diálogos nativos do navegador)
 - Campo de senha com botão de exibir/ocultar
 - Code splitting das rotas (lazy loading) para carregamento mais rápido
+- **Sidebar em árvore** com seções colapsáveis (Favoritos, Páginas, Workspaces),
+  subpáginas aninhadas com expandir/recolher e atalho ＋ para criar (estado
+  persistido no navegador)
+
+### Atalhos de teclado
+| Atalho | Ação |
+| ------ | ---- |
+| `Ctrl+K` / `Ctrl+P` | Abrir command palette |
+| `Ctrl+N` | Nova página |
+| `Ctrl+Shift+L` | Alternar tema claro/escuro |
+| `Ctrl+\` | Recolher/expandir sidebar |
+
+## Notificações em tempo real (SSE)
+
+Notificações são entregues em tempo real via **Server-Sent Events**, sem
+precisar de polling:
+
+- **Menções** (`@Nome` no editor de páginas — digite `@` para autocompletar
+  com os membros do workspace) — notificação `mention`, criadas via
+  `POST /api/pages/<id>/mentions`
+- **Convites de workspace** — notificação `invite` para o usuário convidado
+  (quando ele já tem conta) e `invite_accepted` para o dono do workspace
+  quando o convite é aceito
+
+Endpoint: `GET /api/notifications/stream` (JWT obrigatório no header
+`Authorization` — por isso o cliente usa `fetch` + `ReadableStream` em vez de
+`EventSource`). Eventos emitidos: `connected` ao abrir a conexão,
+`notification` (payload JSON da notificação) a cada nova notificação e
+heartbeats `: ping` a cada `SSE_HEARTBEAT_SECONDS` (padrão 15s).
+
+No frontend, `useRealtimeNotifications` (hook) mantém a conexão com
+reconexão exponencial (1s → 30s), atualiza o contador do sino e exibe um
+toast a cada notificação.
+
+> **Limitação (multi-worker):** o broker de notificações é em memória
+> (`services/notification_broker.py`), ou seja, cada processo Gunicorn só
+> entrega eventos publicados nele próprio. Para rodar com vários workers,
+> substitua o broker por pub/sub do Redis. Em dev (1 processo) funciona
+> integralmente.
 
 ## E-mail transacional (Google Apps Script)
 
@@ -308,6 +371,5 @@ ignorado com um aviso no log, sem quebrar o fluxo).
 - **Monitoramento**: Integração com Prometheus/Grafana para métricas de performance
 - **Colaboração em tempo real**: WebSockets para edição simultânea de páginas
 - **Backup automático**: Snapshots periódicos do banco de dados
-- **Notificações**: Sistema de notificações em tempo real para convites e menções
 - **Mobile app**: Aplicativo nativo para iOS/Android
 - **Internacionalização**: Suporte a múltiplos idiomas (i18n)

@@ -3,10 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Editor, useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { blockService, pageService } from "@/services/pages";
+import { blockService, commentService, pageService } from "@/services/pages";
 import { databaseService } from "@/services/databases";
 import { fileService } from "@/services/files";
-import { Block } from "@/types";
+import { Block, Page } from "@/types";
 import { useDialog } from "@/contexts/DialogContext";
 import { useToast } from "@/contexts/ToastContext";
 import { getErrorMessage } from "@/utils/error";
@@ -15,8 +15,24 @@ import {
   EditorPageContext,
   FileNode,
   ImageNode,
+  MentionNode,
+  PageLinkNode,
   SubpageNode,
 } from "@/components/editorNodes";
+import {
+  CalloutNode,
+  ColumnNode,
+  Columns2Node,
+  Columns3Node,
+  ToggleBodyNode,
+  ToggleNode,
+  ToggleSummaryNode,
+} from "@/components/editorBlocks";
+import { SlashMenu } from "@/components/SlashMenu";
+import type { SlashItem, SlashRange } from "@/components/SlashMenu";
+import { MentionList } from "@/components/MentionList";
+import type { MentionRange } from "@/components/MentionList";
+import type { User } from "@/types";
 
 type JsonNode = {
   type: string;
@@ -27,6 +43,7 @@ type JsonNode = {
 
 function getText(node: JsonNode): string {
   if (node.type === "text") return node.text || "";
+  if (node.type === "mention") return "@" + (node.attrs?.label || "");
   if (!node.content) return "";
   return node.content.map(getText).join("");
 }
@@ -37,6 +54,13 @@ function listText(node: JsonNode): string {
     return p ? getText(p) : "";
   });
   return items.join("\n");
+}
+
+function collectMentionLabels(node: JsonNode): string[] {
+  const labels: string[] = [];
+  if (node.type === "mention" && node.attrs?.label) labels.push(node.attrs.label as string);
+  for (const child of node.content || []) labels.push(...collectMentionLabels(child));
+  return labels;
 }
 
 function listNode(type: "bulletList" | "orderedList", text: string): JsonNode {
@@ -88,6 +112,50 @@ function blockToNode(b: Block): JsonNode {
           filename: (c.filename as string) || "",
         },
       };
+    case "page_link":
+      return {
+        type: "pagelink",
+        attrs: {
+          pageId: (c.page_id as number) ?? null,
+          title: (c.title as string) || "",
+          icon: (c.icon as string) || "📄",
+        },
+      };
+    case "callout":
+      return {
+        type: "callout",
+        attrs: { icon: (c.icon as string) || "💡" },
+        content: [{ type: "paragraph", content: textContent }],
+      };
+    case "toggle": {
+      const blocks = ((c.blocks as unknown[]) || []).map((b2) => blockToNode(b2 as Block));
+      return {
+        type: "toggle",
+        content: [
+          {
+            type: "toggleSummary",
+            content: text ? [{ type: "text", text }] : [],
+          },
+          {
+            type: "toggleBody",
+            content: blocks.length ? blocks : [{ type: "paragraph" }],
+          },
+        ],
+      };
+    }
+    case "columns": {
+      const cols = ((c.columns as unknown[]) || []).map((col) =>
+        ((col as unknown[]) || []).map((b2) => blockToNode(b2 as Block))
+      );
+      const count = cols.length === 3 ? 3 : 2;
+      return {
+        type: count === 3 ? "columns3" : "columns2",
+        content: cols.map((col) => ({
+          type: "column",
+          content: col.length ? col : [{ type: "paragraph" }],
+        })),
+      };
+    }
     case "paragraph":
       return { type: "paragraph", content: textContent };
     case "heading_1":
@@ -101,7 +169,6 @@ function blockToNode(b: Block): JsonNode {
     case "numbered_list":
       return listNode("orderedList", text);
     case "quote":
-    case "callout":
       return { type: "blockquote", content: [{ type: "paragraph", content: textContent }] };
     case "code":
       return { type: "codeBlock", content: text ? [{ type: "text", text }] : [] };
@@ -149,6 +216,41 @@ function nodeToBlock(node: JsonNode): { type: string; content: Record<string, un
           file_id: attrs.fileId ?? null,
           name: attrs.name ?? "",
           filename: attrs.filename ?? "",
+        },
+      };
+    case "pagelink":
+      return {
+        type: "page_link",
+        content: {
+          page_id: attrs.pageId ?? null,
+          title: attrs.title ?? "",
+          icon: attrs.icon ?? "📄",
+        },
+      };
+    case "callout":
+      return {
+        type: "callout",
+        content: { text: getText(node), icon: attrs.icon ?? "💡" },
+      };
+    case "toggle": {
+      const summary = (node.content || [])[0];
+      const body = (node.content || [])[1];
+      return {
+        type: "toggle",
+        content: {
+          text: getText(summary || ({} as JsonNode)),
+          blocks: ((body as JsonNode)?.content || []).map(nodeToBlock),
+        },
+      };
+    }
+    case "columns2":
+    case "columns3":
+      return {
+        type: "columns",
+        content: {
+          columns: (node.content || []).map((col) =>
+            ((col as JsonNode).content || []).map(nodeToBlock)
+          ),
         },
       };
     case "image":
@@ -204,12 +306,14 @@ export function BlockEditor({
   const dialog = useDialog();
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const imageRangeRef = useRef<SlashRange | null>(null);
   const uploadImageRef = useRef<(file: File) => void>(() => {});
   const applyingInitial = useRef(false);
   const isMounted = useRef(true);
   const blocksRef = useRef<Block[]>(initialBlocks);
   blocksRef.current = initialBlocks;
   const editorRef = useRef<Editor | null>(null);
+  const notifiedMentions = useRef<Set<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSync = useMemo(
@@ -269,7 +373,22 @@ export function BlockEditor({
   }, [debouncedSync]);
 
   const editor = useEditor({
-    extensions: [StarterKit, SubpageNode, DatabaseNode, FileNode, ImageNode],
+    extensions: [
+      StarterKit,
+      SubpageNode,
+      DatabaseNode,
+      FileNode,
+      ImageNode,
+      PageLinkNode,
+      MentionNode,
+      CalloutNode,
+      ToggleSummaryNode,
+      ToggleBodyNode,
+      ToggleNode,
+      ColumnNode,
+      Columns2Node,
+      Columns3Node,
+    ],
     content: "",
     editorProps: {
       attributes: {
@@ -286,9 +405,17 @@ export function BlockEditor({
         return false;
       },
     },
-    onUpdate: () => {
+    onUpdate: ({ editor: ed }) => {
       if (applyingInitial.current) return;
       debouncedSync.call();
+      const labels = collectMentionLabels(ed.getJSON() as JsonNode);
+      const fresh = labels.filter((label) => !notifiedMentions.current.has(label));
+      if (fresh.length) {
+        fresh.forEach((label) => notifiedMentions.current.add(label));
+        commentService.notifyMentions(pageId, fresh).catch(() => {
+          fresh.forEach((label) => notifiedMentions.current.delete(label));
+        });
+      }
     },
   });
 
@@ -328,7 +455,121 @@ export function BlockEditor({
     }
   }
 
-  async function insertSubpage() {
+  /** Insert a node at the slash-menu range (replacing the "/query") or append at the end. */
+  function insertNodeAt(node: JsonNode | string | Array<JsonNode | string>, range?: SlashRange) {
+    if (!editor) return;
+    if (range) {
+      editor.chain().focus().deleteRange(range).insertContent(node as JsonNode).run();
+    } else {
+      appendBlock(node as Record<string, unknown>);
+    }
+  }
+
+  function columnsNode(count: 2 | 3): JsonNode {
+    const type = count === 3 ? "columns3" : "columns2";
+    return {
+      type,
+      content: Array.from({ length: count }, () => ({
+        type: "column",
+        content: [{ type: "paragraph" }],
+      })),
+    };
+  }
+
+  function toggleNode(): JsonNode {
+    return {
+      type: "toggle",
+      content: [
+        { type: "toggleSummary", content: [] },
+        { type: "toggleBody", content: [{ type: "paragraph" }] },
+      ],
+    };
+  }
+
+  function handleSlashSelect(item: SlashItem, range: SlashRange) {
+    switch (item.action) {
+      case "paragraph":
+        insertNodeAt({ type: "paragraph" }, range);
+        break;
+      case "heading1":
+        insertNodeAt({ type: "heading", attrs: { level: 1 }, content: [] }, range);
+        break;
+      case "heading2":
+        insertNodeAt({ type: "heading", attrs: { level: 2 }, content: [] }, range);
+        break;
+      case "heading3":
+        insertNodeAt({ type: "heading", attrs: { level: 3 }, content: [] }, range);
+        break;
+      case "bulletList":
+        insertNodeAt(
+          {
+            type: "bulletList",
+            content: [{ type: "listItem", content: [{ type: "paragraph" }] }],
+          },
+          range
+        );
+        break;
+      case "orderedList":
+        insertNodeAt(
+          {
+            type: "orderedList",
+            content: [{ type: "listItem", content: [{ type: "paragraph" }] }],
+          },
+          range
+        );
+        break;
+      case "quote":
+        insertNodeAt(
+          { type: "blockquote", content: [{ type: "paragraph" }] },
+          range
+        );
+        break;
+      case "callout":
+        insertNodeAt(
+          {
+            type: "callout",
+            attrs: { icon: item.emoji || "💡" },
+            content: [{ type: "paragraph" }],
+          },
+          range
+        );
+        break;
+      case "code":
+        insertNodeAt({ type: "codeBlock" }, range);
+        break;
+      case "divider":
+        insertNodeAt({ type: "horizontalRule" }, range);
+        break;
+      case "toggle":
+        insertNodeAt(toggleNode(), range);
+        break;
+      case "columns2":
+        insertNodeAt(columnsNode(2), range);
+        break;
+      case "columns3":
+        insertNodeAt(columnsNode(3), range);
+        break;
+      case "emoji":
+        insertNodeAt(item.emoji || "😀", range);
+        break;
+      case "subpage":
+        insertSubpage(range);
+        break;
+      case "table":
+        insertTable(range);
+        break;
+      case "pageLink":
+        insertPageLink(range);
+        break;
+      case "image":
+      case "file":
+        imageRangeRef.current = range;
+        fileInputRef.current?.click();
+        break;
+    }
+  }
+
+  async function insertSubpage(range?: SlashRange) {
     const result = await dialog.prompt({
       title: "Nova subpágina",
       confirmLabel: "Criar",
@@ -344,16 +585,60 @@ export function BlockEditor({
         icon: result.icon || undefined,
         parent_id: pageId,
       });
-      appendBlock({
-        type: "subpage",
-        attrs: { pageId: page.id, title: page.title, icon: page.icon || "📄" },
-      });
+      insertNodeAt(
+        {
+          type: "subpage",
+          attrs: { pageId: page.id, title: page.title, icon: page.icon || "📄" },
+        },
+        range
+      );
     } catch (err) {
       toast.push(getErrorMessage(err), "error");
     }
   }
 
-  async function insertTable() {
+  async function insertPageLink(range: SlashRange) {
+    let pages: Page[] = [];
+    try {
+      pages = await pageService.list(workspaceId, undefined, true);
+    } catch (err) {
+      toast.push(getErrorMessage(err), "error");
+      return;
+    }
+    if (pages.length === 0) {
+      toast.push("Crie uma página antes de inserir um link", "info");
+      return;
+    }
+    const result = await dialog.prompt({
+      title: "Link para página",
+      confirmLabel: "Inserir",
+      fields: [
+        {
+          name: "page",
+          label: "Página",
+          type: "select",
+          required: true,
+          defaultValue: String(pages[0].id),
+          options: pages.map((p) => ({
+            label: `${p.icon || "📄"} ${p.title}`,
+            value: String(p.id),
+          })),
+        },
+      ],
+    });
+    if (!result?.page) return;
+    const target = pages.find((p) => String(p.id) === result.page);
+    if (!target) return;
+    insertNodeAt(
+      {
+        type: "pagelink",
+        attrs: { pageId: target.id, title: target.title, icon: target.icon || "📄" },
+      },
+      range
+    );
+  }
+
+  async function insertTable(range?: SlashRange) {
     let databases = [];
     try {
       databases = await databaseService.list(workspaceId);
@@ -398,60 +683,78 @@ export function BlockEditor({
         db = databases.find((d) => String(d.id) === result.db);
       }
       if (!db) return;
-      appendBlock({
-        type: "dbtable",
-        attrs: { databaseId: db.id, name: db.name, icon: db.icon || "🗃️" },
-      });
+      insertNodeAt(
+        {
+          type: "dbtable",
+          attrs: { databaseId: db.id, name: db.name, icon: db.icon || "🗃️" },
+        },
+        range
+      );
     } catch (err) {
       toast.push(getErrorMessage(err), "error");
     }
   }
 
-  async function insertImage(file: File) {
+  async function insertImage(file: File, range?: SlashRange) {
     if (!file.type.startsWith("image/")) {
       toast.push("O arquivo selecionado não é uma imagem", "error");
       return;
     }
     try {
       const uploaded = await fileService.upload(workspaceId, file);
-      appendBlock({
-        type: "image",
-        attrs: {
-          fileId: uploaded.id,
-          name: uploaded.original_name,
-          filename: uploaded.filename,
+      insertNodeAt(
+        {
+          type: "image",
+          attrs: {
+            fileId: uploaded.id,
+            name: uploaded.original_name,
+            filename: uploaded.filename,
+          },
         },
-      });
+        range
+      );
     } catch (err) {
       toast.push(getErrorMessage(err), "error");
     }
   }
   uploadImageRef.current = insertImage;
 
-  async function handleFilePicked(file: File) {
+  async function handleFilePicked(file: File, range?: SlashRange) {
     if (file.type.startsWith("image/")) {
-      insertImage(file);
+      insertImage(file, range);
       return;
     }
     try {
       const uploaded = await fileService.upload(workspaceId, file);
-      appendBlock({
-        type: "fileref",
-        attrs: {
-          fileId: uploaded.id,
-          name: uploaded.original_name,
-          filename: uploaded.filename,
+      insertNodeAt(
+        {
+          type: "fileref",
+          attrs: {
+            fileId: uploaded.id,
+            name: uploaded.original_name,
+            filename: uploaded.filename,
+          },
         },
-      });
+        range
+      );
       toast.push("Arquivo anexado", "success");
     } catch (err) {
       toast.push(getErrorMessage(err), "error");
     }
   }
 
+  function insertMention(member: User, range: MentionRange) {
+    editorRef.current
+      ?.chain()
+      .focus()
+      .deleteRange(range)
+      .insertContent({ type: "mention", attrs: { id: member.id, label: member.full_name } })
+      .run();
+  }
+
   return (
     <EditorPageContext.Provider value={{ workspaceId, pageId }}>
-      <div className="mb-2 flex flex-wrap gap-1 border-b border-gray-200 pb-2 dark:border-gray-700">
+      <div className="mb-3 flex flex-wrap gap-1 rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-soft-sm dark:border-zinc-800 dark:bg-surface-dark">
         <ToolbarButton label="B" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} />
         <ToolbarButton label="I" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} />
         <ToolbarButton label="H1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} />
@@ -462,7 +765,7 @@ export function BlockEditor({
         <ToolbarButton label="❝ Citação" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
         <ToolbarButton label="</> Código" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive("codeBlock")} />
         <ToolbarButton label="― Divisor" onClick={() => editor?.chain().focus().setHorizontalRule().run()} />
-        <span className="mx-1 w-px self-stretch bg-gray-200 dark:bg-gray-700" />
+        <span className="mx-1 w-px self-stretch bg-zinc-200 dark:bg-zinc-700" />
         <ToolbarButton label="📄 Subpágina" onClick={insertSubpage} />
         <ToolbarButton label="🗃️ Tabela" onClick={insertTable} />
         <ToolbarButton label="📎 Arquivo/Imagem" onClick={() => fileInputRef.current?.click()} />
@@ -473,11 +776,15 @@ export function BlockEditor({
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) handleFilePicked(f);
+          const range = imageRangeRef.current;
+          imageRangeRef.current = null;
+          if (f) handleFilePicked(f, range ?? undefined);
           e.target.value = "";
         }}
       />
       <EditorContent editor={editor} />
+      <SlashMenu editor={editor} onSelect={handleSlashSelect} />
+      <MentionList editor={editor} workspaceId={workspaceId} onSelect={insertMention} />
     </EditorPageContext.Provider>
   );
 }
@@ -495,10 +802,10 @@ function ToolbarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded px-2 py-1 text-sm ${
+      className={`rounded-md px-2 py-1 text-sm transition-colors ${
         active
-          ? "bg-brand-600 text-white"
-          : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          ? "bg-brand-600 text-white shadow-sm"
+          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
       }`}
     >
       {label}

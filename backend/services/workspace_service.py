@@ -4,12 +4,14 @@ import secrets
 from flask import current_app
 
 from extensions import db
+from models.comment import Notification
 from models.user import Role
 from models.workspace_models import Invite
 from repositories.user_repository import UserRepository
 from repositories.workspace_repository import WorkspaceRepository
 from services.email_service import send_email
 from services.exceptions import ConflictError, ForbiddenError, NotFoundError, ServiceError
+from services.notification_broker import broker
 
 
 class WorkspaceService:
@@ -71,6 +73,25 @@ class WorkspaceService:
             ),
             text=f"Você foi convidado para o workspace {ws.name}: {invite_link}",
         )
+
+        invited = UserRepository.get_by_email(email)
+        if invited is not None:
+            inviter = UserRepository.get_by_id(user_id)
+            notification = Notification(
+                user_id=invited.id,
+                type="invite",
+                title="Você recebeu um convite",
+                body=(
+                    f"{inviter.full_name if inviter else 'Alguém'} convidou você "
+                    f"para o workspace {ws.name} (função {role})"
+                ),
+                entity_type="workspace",
+                entity_id=workspace_id,
+            )
+            db.session.add(notification)
+            db.session.commit()
+            broker.publish(invited.id, notification.to_dict())
+
         return invite.to_dict()
 
     @staticmethod
@@ -89,6 +110,25 @@ class WorkspaceService:
         invite.accepted = True
         db.session.commit()
         ws = WorkspaceRepository.get_by_id(invite.workspace_id)
+
+        if ws.owner_id != user_id:
+            owner = UserRepository.get_by_id(ws.owner_id)
+            if owner is not None:
+                notification = Notification(
+                    user_id=owner.id,
+                    type="invite_accepted",
+                    title="Convite aceito",
+                    body=(
+                        f"{user.full_name} aceitou seu convite e entrou no "
+                        f"workspace {ws.name}"
+                    ),
+                    entity_type="workspace",
+                    entity_id=ws.id,
+                )
+                db.session.add(notification)
+                db.session.commit()
+                broker.publish(owner.id, notification.to_dict())
+
         return ws.to_dict()
 
     @staticmethod

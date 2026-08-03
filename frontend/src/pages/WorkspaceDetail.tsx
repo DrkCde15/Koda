@@ -257,25 +257,30 @@ export function WorkspaceDetailPage() {
   }
 
   return (
-    <div className="p-4 sm:p-8">
+    <div className="mx-auto max-w-5xl p-4 sm:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">
-            <span className="mr-2">{ws?.icon || "📁"}</span>
-            {ws?.name}
-          </h1>
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-2xl dark:bg-brand-900/40">
+            {ws?.icon || "📁"}
+          </span>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{ws?.name}</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {ws?.slug && <span className="font-mono text-xs">/{ws.slug}</span>}
+            </p>
+          </div>
           <PresenceAvatars presences={presences} />
         </div>
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary" onClick={handleNewPage} disabled={createPage.isPending}>
-            + Nova página
+            ＋ Nova página
           </button>
           <button className="btn-ghost" onClick={handleRenameWorkspace}>
             ✏️ Editar
           </button>
           {isOwner && (
             <button
-              className="btn-ghost text-red-500 hover:text-red-600"
+              className="btn-ghost text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
               onClick={async () => {
                 const ok = await dialog.confirm({
                   title: "Excluir workspace",
@@ -335,7 +340,7 @@ export function WorkspaceDetailPage() {
               <li key={p.id}>
                 <button
                   onClick={() => navigate(`/pages/${p.id}`)}
-                  className="w-full rounded p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                 >
                   {p.icon || "📄"} {p.title}
                 </button>
@@ -348,15 +353,15 @@ export function WorkspaceDetailPage() {
         </div>
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap gap-4 border-b border-gray-200 text-sm dark:border-gray-700">
+          <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-zinc-200/80 bg-white p-1 shadow-soft-sm dark:border-zinc-800 dark:bg-surface-dark">
             {(["pages", "favorites", "trash", "databases", "files", "members", "activity"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={
                   tab === t
-                    ? "border-b-2 border-brand-600 pb-2 font-medium"
-                    : "pb-2 text-gray-500 dark:text-gray-300"
+                    ? "rounded-lg bg-brand-50 px-3 py-1.5 font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+                    : "rounded-lg px-3 py-1.5 text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
                 }
               >
                 {t === "pages"
@@ -382,7 +387,7 @@ export function WorkspaceDetailPage() {
                 <li key={p.id}>
                   <button
                     onClick={() => navigate(`/pages/${p.id}`)}
-                    className="w-full rounded p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                   >
                     {p.icon || "📄"} {p.title}
                   </button>
@@ -400,7 +405,7 @@ export function WorkspaceDetailPage() {
                 <li key={p.id}>
                   <button
                     onClick={() => navigate(`/pages/${p.id}`)}
-                    className="w-full rounded p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                   >
                     ⭐ {p.title}
                   </button>
@@ -417,7 +422,7 @@ export function WorkspaceDetailPage() {
               {trash.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                 >
                   <span>🗑️ {p.title}</span>
                   <button
@@ -471,7 +476,7 @@ export function WorkspaceDetailPage() {
                   <li key={db.id}>
                     <button
                       onClick={() => navigate(`/workspaces/${workspaceId}/databases/${db.id}`)}
-                      className="w-full rounded p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                     >
                       {db.icon || "🗃️"} {db.name}{" "}
                       <span className="text-xs text-gray-400">
@@ -506,7 +511,7 @@ export function WorkspaceDetailPage() {
                 {files.map((f) => (
                   <li
                     key={f.id}
-                    className="flex items-center justify-between rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                   >
                     <button
                       onClick={() =>
@@ -544,7 +549,7 @@ export function WorkspaceDetailPage() {
                   return (
                     <li
                       key={m.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded p-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                     >
                       <span>
                         {m.user?.full_name || `Usuário #${m.user_id}`}
@@ -633,7 +638,7 @@ export function WorkspaceDetailPage() {
                       .map((i) => (
                         <li
                           key={i.id}
-                          className="flex items-center justify-between rounded p-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                          className="flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
                         >
                           <span>
                             {i.email} — <span className="text-gray-400">{i.role}</span>

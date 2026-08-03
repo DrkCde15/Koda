@@ -41,8 +41,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             onClick={() => remove(t.id)}
-            className={`cursor-pointer rounded-md px-4 py-2 text-sm text-white shadow-lg ${
-              t.type === "error" ? "bg-red-600" : t.type === "success" ? "bg-green-600" : "bg-gray-800"
+            className={`animate-scale-in cursor-pointer rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-soft-lg transition-opacity hover:opacity-90 ${
+              t.type === "error" ? "bg-red-600" : t.type === "success" ? "bg-green-600" : "bg-zinc-800"
             }`}
           >
             {t.message}

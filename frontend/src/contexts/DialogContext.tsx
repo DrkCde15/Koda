@@ -125,13 +125,17 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {children}
       {dialog && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) cancel();
           }}
         >
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
-            <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="animate-scale-in w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark"
+          >
+            <h2 className="mb-1 text-base font-semibold tracking-tight text-zinc-900 dark:text-white">
               {dialog.options.title}
             </h2>
 
@@ -211,7 +215,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                     type="button"
                     className={
                       dialog.options.danger
-                        ? "rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                        ? "btn-danger"
                         : "btn-primary"
                     }
                     onClick={acceptConfirm}

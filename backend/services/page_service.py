@@ -46,9 +46,16 @@ class PageService:
         return page.to_dict()
 
     @staticmethod
-    def list_pages(user_id: int, workspace_id: int, parent_id: Optional[int]) -> list[dict]:
+    def list_pages(
+        user_id: int,
+        workspace_id: int,
+        parent_id: Optional[int],
+        all_pages: bool = False,
+    ) -> list[dict]:
         assert_member(user_id, workspace_id)
-        pages = PageRepository.list_by_workspace(workspace_id, parent_id=parent_id)
+        pages = PageRepository.list_by_workspace(
+            workspace_id, parent_id=parent_id, all_pages=all_pages
+        )
         return [p.to_dict() for p in pages]
 
     @staticmethod

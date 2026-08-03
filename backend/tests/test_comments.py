@@ -64,3 +64,47 @@ def test_create_comment_and_notification_for_mentions(client, auth_headers, seed
     notifications = notifications_resp.get_json()["data"]
     assert len(notifications) >= 1
     assert any(item["type"] == "mention" for item in notifications)
+
+
+def test_notify_mentions_endpoint_creates_notification(client, auth_headers, seeded_workspace_and_page):
+    _, page_id, second_user_id = seeded_workspace_and_page
+
+    response = client.post(
+        f"/api/pages/{page_id}/mentions",
+        json={"mentions": ["Jane Doe"]},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["success"] is True
+    notified = payload["data"]["notified"]
+    assert len(notified) == 1
+    assert notified[0]["type"] == "mention"
+    assert notified[0]["user_id"] == second_user_id
+    assert notified[0]["entity_id"] == page_id
+
+
+def test_notify_mentions_requires_mentions(client, auth_headers, seeded_workspace_and_page):
+    _, page_id, _ = seeded_workspace_and_page
+
+    response = client.post(
+        f"/api/pages/{page_id}/mentions",
+        json={"mentions": []},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+
+
+def test_notify_mentions_ignores_self_and_unknown(client, auth_headers, seeded_workspace_and_page):
+    _, page_id, _ = seeded_workspace_and_page
+
+    response = client.post(
+        f"/api/pages/{page_id}/mentions",
+        json={"mentions": ["Not A Member", "Unknown Name"]},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["data"]["notified"] == []

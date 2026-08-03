@@ -67,3 +67,29 @@ class ItemCreateSchema(Schema):
 class ItemUpdateSchema(Schema):
     position = fields.Integer()
     values = fields.List(fields.Nested(ItemValueSchema), missing=list, allow_none=True)
+
+
+FILTER_OPERATORS = {
+    "contains",
+    "equals",
+    "not_equals",
+    "is_empty",
+    "is_not_empty",
+    "greater_than",
+    "less_than",
+    "after",
+    "before",
+}
+
+SORT_DIRECTIONS = {"asc", "desc"}
+
+
+class DatabaseFilterSchema(Schema):
+    property_id = fields.Integer(required=True)
+    operator = fields.String(required=True, validate=validate.OneOf(sorted(FILTER_OPERATORS)))
+    value = fields.Raw(allow_none=True)
+
+
+class DatabaseSortSchema(Schema):
+    property_id = fields.Integer(required=True)
+    direction = fields.String(validate=validate.OneOf(sorted(SORT_DIRECTIONS)), missing="asc")

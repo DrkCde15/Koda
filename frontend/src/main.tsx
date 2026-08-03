@@ -8,6 +8,7 @@ import { ToastProvider } from "./contexts/ToastContext";
 import { DialogProvider } from "./contexts/DialogContext";
 import { queryClient } from "./lib/queryClient";
 import { useThemeStore } from "./store/themeStore";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 useThemeStore.getState();

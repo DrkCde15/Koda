@@ -32,26 +32,27 @@ export function RegisterPage() {
 
   return (
     <AuthLayout>
-      <h1 className="mb-4 text-lg font-semibold">Criar conta</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <h1 className="mb-1 text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Criar conta</h1>
+      <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">Comece a organizar seus projetos.</p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm">Nome</label>
-          <input className="input" {...register("full_name", { required: true })} />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Nome</label>
+          <input className="input" placeholder="Seu nome" {...register("full_name", { required: true })} />
         </div>
         <div>
-          <label className="mb-1 block text-sm">Email</label>
-          <input className="input" type="email" {...register("email", { required: true })} />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
+          <input className="input" type="email" placeholder="voce@empresa.com" {...register("email", { required: true })} />
         </div>
         <div>
-          <label className="mb-1 block text-sm">Senha</label>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Senha</label>
           <PasswordInput {...register("password", { required: true, minLength: 8 })} />
         </div>
         <button className="btn-primary w-full" type="submit">
           Cadastrar
         </button>
       </form>
-      <div className="mt-4 text-center text-sm">
-        <Link to="/login" className="text-brand-600 hover:underline">
+      <div className="mt-5 text-center text-sm">
+        <Link to="/login" className="font-medium text-brand-600 hover:text-brand-700">
           Já tenho conta
         </Link>
       </div>

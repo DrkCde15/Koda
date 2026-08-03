@@ -91,6 +91,7 @@ def _register_blueprints(app: Flask) -> None:
     from api.databases.databases import databases_bp
     from api.comments.comments import comments_bp
     from api.activity.activity import activity_bp
+    from api.notifications.notifications import notifications_bp
     from api.docs import register_docs
 
     app.register_blueprint(errors_bp)
@@ -104,6 +105,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(databases_bp, url_prefix="/api/databases")
     app.register_blueprint(comments_bp, url_prefix="/api")
     app.register_blueprint(activity_bp, url_prefix="/api")
+    app.register_blueprint(notifications_bp, url_prefix="/api")
     
     # Register API documentation
     register_docs(app)

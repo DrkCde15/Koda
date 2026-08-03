@@ -33,9 +33,10 @@ def list_pages():
     user = get_current_user()
     workspace_id = request.args.get("workspace_id", type=int)
     parent_id = request.args.get("parent_id", type=int)
+    all_pages = request.args.get("all", default=False, type=bool)
     if not workspace_id:
         return error("workspace_id is required", None, 400)
-    pages = PageService.list_pages(user.id, workspace_id, parent_id)
+    pages = PageService.list_pages(user.id, workspace_id, parent_id, all_pages)
     return success("Pages retrieved", pages)
 
 

@@ -36,14 +36,16 @@ class PageRepository:
         workspace_id: int,
         include_deleted: bool = False,
         parent_id: Optional[int] = None,
+        all_pages: bool = False,
     ) -> list[Page]:
         query = db.session.query(Page).filter(Page.workspace_id == workspace_id)
         if not include_deleted:
             query = query.filter(Page.is_deleted.is_(False))
-        if parent_id is not None:
-            query = query.filter(Page.parent_id == parent_id)
-        else:
-            query = query.filter(Page.parent_id.is_(None))
+        if not all_pages:
+            if parent_id is not None:
+                query = query.filter(Page.parent_id == parent_id)
+            else:
+                query = query.filter(Page.parent_id.is_(None))
         return query.order_by(Page.position.asc(), Page.id.asc()).all()
 
     @staticmethod

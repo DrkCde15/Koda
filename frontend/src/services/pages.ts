@@ -2,9 +2,9 @@ import { ApiResponse, Block, Comment, NotificationItem, Page, PageRevision } fro
 import api from "@/lib/axios";
 
 export const pageService = {
-  async list(workspaceId: number, parentId?: number): Promise<Page[]> {
+  async list(workspaceId: number, parentId?: number, allPages = false): Promise<Page[]> {
     const { data } = await api.get<ApiResponse<Page[]>>("/pages", {
-      params: { workspace_id: workspaceId, parent_id: parentId },
+      params: { workspace_id: workspaceId, parent_id: parentId, all: allPages },
     });
     return data.data as Page[];
   },
@@ -65,6 +65,14 @@ export const commentService = {
   async create(pageId: number, payload: { body: string; mentions?: string[] }): Promise<{ comments: Comment[] }> {
     const { data } = await api.post<ApiResponse<{ comments: Comment[] }>>(`/pages/${pageId}/comments`, payload);
     return data.data as { comments: Comment[] };
+  },
+
+  async notifyMentions(pageId: number, mentions: string[]): Promise<NotificationItem[]> {
+    const { data } = await api.post<ApiResponse<{ notified: NotificationItem[] }>>(
+      `/pages/${pageId}/mentions`,
+      { mentions },
+    );
+    return (data.data as { notified: NotificationItem[] }).notified;
   },
 
   async listNotifications(): Promise<NotificationItem[]> {

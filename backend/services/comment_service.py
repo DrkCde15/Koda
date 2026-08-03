@@ -7,6 +7,7 @@ from middlewares.permissions import assert_member
 from models.comment import Notification, PageComment
 from models.page import Page
 from services.exceptions import NotFoundError
+from services.notification_broker import broker
 
 
 class CommentService:
@@ -29,8 +30,20 @@ class CommentService:
         db.session.add(comment)
         db.session.commit()
 
-        CommentService._create_mentions_notifications(page, user_id, comment)
+        CommentService._create_mentions_notifications(page, user_id, mention_names, comment.body)
         return {"comments": [comment.to_dict()]}
+
+    @staticmethod
+    def notify_mentions(user_id: int, page_id: int, mentions: list[str]) -> list[dict]:
+        """Create mention notifications from inline document mentions."""
+        page = db.session.get(Page, page_id)
+        if page is None or page.is_deleted:
+            raise NotFoundError("Page not found")
+        assert_member(user_id, page.workspace_id)
+
+        mention_names = [name for name in (mentions or []) if name]
+        created = CommentService._create_mentions_notifications(page, user_id, mention_names, "")
+        return [notification.to_dict() for notification in created]
 
     @staticmethod
     def list_comments(user_id: int, page_id: int) -> list[dict]:
@@ -67,14 +80,17 @@ class CommentService:
         return notification.to_dict()
 
     @staticmethod
-    def _create_mentions_notifications(page: Page, actor_id: int, comment: PageComment) -> None:
+    def _create_mentions_notifications(
+        page: Page, actor_id: int, mention_names: list[str], body: str
+    ) -> list[Notification]:
         from models.workspace_models import WorkspaceMember
         from models.user import User
 
-        mention_names = [name for name in comment.mentions if name]
+        mention_names = [name for name in (mention_names or []) if name]
         if not mention_names:
-            return
+            return []
 
+        created: list[Notification] = []
         for mention in mention_names:
             user = (
                 db.session.query(User)
@@ -101,10 +117,14 @@ class CommentService:
                 user_id=user.id,
                 type="mention",
                 title="Você foi mencionado",
-                body=f"{comment.body}",
+                body=f"{body}",
                 entity_type="page",
                 entity_id=page.id,
             )
             db.session.add(notification)
+            created.append(notification)
 
         db.session.commit()
+        for notification in created:
+            broker.publish(notification.user_id, notification.to_dict())
+        return created

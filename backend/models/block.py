@@ -23,6 +23,9 @@ class BlockType:
     SUBPAGE = "subpage"
     DATABASE = "database"
     FILE = "file"
+    TOGGLE = "toggle"
+    COLUMNS = "columns"
+    PAGE_LINK = "page_link"
 
     @classmethod
     def values(cls) -> list[str]:
@@ -41,6 +44,9 @@ class BlockType:
             cls.SUBPAGE,
             cls.DATABASE,
             cls.FILE,
+            cls.TOGGLE,
+            cls.COLUMNS,
+            cls.PAGE_LINK,
         ]
 
 

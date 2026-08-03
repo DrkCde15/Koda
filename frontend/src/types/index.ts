@@ -65,6 +65,7 @@ export interface Page {
   created_by: number;
   created_at?: string;
   updated_at?: string;
+  children?: Page[];
 }
 
 export interface PageRevision {
@@ -194,3 +195,29 @@ export interface Activity {
 
 export const ROLES = ["owner", "admin", "editor", "viewer"] as const;
 export type Role = (typeof ROLES)[number];
+
+export type FilterOperator =
+  | "contains"
+  | "equals"
+  | "not_equals"
+  | "is_empty"
+  | "is_not_empty"
+  | "greater_than"
+  | "less_than"
+  | "after"
+  | "before";
+
+export interface FilterRule {
+  property_id: number;
+  operator: FilterOperator;
+  value?: string | number | null;
+}
+
+export type SortDirection = "asc" | "desc";
+
+export interface SortRule {
+  property_id: number;
+  direction: SortDirection;
+}
+
+export type DatabaseViewMode = "grid" | "board";
