@@ -20,7 +20,7 @@ export const EditorPageContext = createContext<EditorPageCtx>({
 });
 
 const cardClass =
-  "my-2 flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:bg-gray-800";
+  "koda-node-card";
 
 function SubpageView({ node }: NodeViewProps) {
   const navigate = useNavigate();
@@ -38,8 +38,8 @@ function SubpageView({ node }: NodeViewProps) {
         }}
       >
         <span>{icon}</span>
-        <span className="font-medium underline decoration-gray-300">{title}</span>
-        <span className="ml-auto text-xs text-gray-400">subpágina →</span>
+        <span className="font-medium text-[var(--koda-text)]">{title}</span>
+        <span className="ml-auto text-xs text-gray-400">abrir →</span>
       </button>
     </NodeViewWrapper>
   );
@@ -64,7 +64,7 @@ function DatabaseView({ node }: NodeViewProps) {
       >
         <span>{icon}</span>
         <span className="font-medium">{name}</span>
-        <span className="ml-auto text-xs text-gray-400">tabela →</span>
+        <span className="ml-auto text-xs text-gray-400">abrir →</span>
       </button>
     </NodeViewWrapper>
   );
@@ -87,7 +87,7 @@ function FileView({ node }: NodeViewProps) {
       >
         <span>📎</span>
         <span className="font-medium">{name}</span>
-        <span className="ml-auto text-xs text-gray-400">baixar ↓</span>
+        <span className="ml-auto text-xs text-[var(--koda-text-faint)]">baixar ↓</span>
       </button>
     </NodeViewWrapper>
   );
@@ -125,15 +125,15 @@ function ImageView({ node }: NodeViewProps) {
     <NodeViewWrapper>
       <div contentEditable={false} className="my-2">
         {failed ? (
-          <div className={cardClass}>🖼️ Falha ao carregar a imagem</div>
+          <div className={cardClass}>Falha ao carregar a imagem</div>
         ) : src ? (
           <img
             src={src}
             alt={name}
-            className="max-w-full rounded-md border border-gray-200 dark:border-gray-700"
+            className="max-w-full rounded-2xl border border-[var(--koda-border)] shadow-soft"
           />
         ) : (
-          <div className={cardClass}>🖼️ Carregando imagem…</div>
+          <div className="skeleton h-24 w-full" />
         )}
       </div>
     </NodeViewWrapper>
@@ -150,7 +150,7 @@ function PageLinkView({ node }: NodeViewProps) {
       <button
         type="button"
         contentEditable={false}
-        className="my-1 inline-flex items-center gap-1.5 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-brand-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:text-brand-300 dark:hover:bg-gray-800"
+        className="my-1 inline-flex items-center gap-1.5 rounded-lg border border-[var(--koda-border)] bg-[var(--koda-surface)] px-2.5 py-1 text-sm font-medium text-brand-600 transition-all duration-150 hover:-translate-y-px hover:shadow-soft dark:text-brand-300"
         onClick={() => {
           if (pageId) navigate(`/pages/${pageId}`);
         }}
@@ -159,7 +159,7 @@ function PageLinkView({ node }: NodeViewProps) {
         <span className="font-medium underline decoration-dotted underline-offset-2">
           {title}
         </span>
-        <span className="text-xs text-gray-400">↗</span>
+        <span className="text-xs text-[var(--koda-text-faint)]">↗</span>
       </button>
     </NodeViewWrapper>
   );

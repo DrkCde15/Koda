@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { ReactNode } from "react";
+import { Icon } from "@/components/ui/icons";
 
 export type DialogOption = string | { label: string; value: string };
 
@@ -125,7 +126,8 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {children}
       {dialog && (
         <div
-          className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
+          className="animate-fade-in fixed inset-0 z-[55] flex items-center justify-center p-4"
+          style={{ background: "rgb(8 9 13 / 0.55)", backdropFilter: "blur(8px)" }}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) cancel();
           }}
@@ -133,98 +135,133 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           <div
             role="dialog"
             aria-modal="true"
-            className="animate-scale-in w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark"
+            className="animate-pop w-full max-w-md overflow-hidden rounded-3xl border bg-[var(--koda-surface)] shadow-float"
+            style={{ borderColor: "var(--koda-border)" }}
           >
-            <h2 className="mb-1 text-base font-semibold tracking-tight text-zinc-900 dark:text-white">
-              {dialog.options.title}
-            </h2>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgb(var(--koda-glow) / 0.6), transparent)",
+              }}
+            />
+            <div className="relative px-6 pt-6">
+              <div className="mb-1 flex items-center gap-3">
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-2xl text-base transition-transform ${
+                    dialog.kind === "confirm" && dialog.options.danger
+                      ? "bg-red-500/10 text-red-500"
+                      : "brand-orb"
+                  }`}
+                  style={
+                    dialog.kind === "confirm" && !dialog.options.danger
+                      ? { background: "rgb(93 91 239 / 0.12)", color: "#5d5bef" }
+                      : undefined
+                  }
+                >
+                  {dialog.kind === "confirm"
+                    ? dialog.options.danger
+                      ? <Icon name="trash" className="h-5 w-5" />
+                      : <Icon name="sparkles" className="h-5 w-5" />
+                    : <Icon name="edit" className="h-5 w-5" />}
+                </span>
+                <h2 className="text-lg font-semibold tracking-tight text-[var(--koda-text)]">
+                  {dialog.options.title}
+                </h2>
+              </div>
+            </div>
 
-            {dialog.kind === "prompt" ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submitPrompt();
-                }}
-              >
-                {dialog.options.description && (
-                  <p className="mb-3 text-sm text-gray-500 dark:text-gray-300">
-                    {dialog.options.description}
-                  </p>
-                )}
-                <div className="space-y-3">
-                  {dialog.options.fields.map((field, idx) => (
-                    <label key={field.name} className="block">
-                      <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {field.label}
-                        {field.required && <span className="text-red-500"> *</span>}
-                      </span>
-                      {field.type === "select" ? (
-                        <select
-                          ref={idx === 0 ? (el) => (firstFieldRef.current = el) : undefined}
-                          className="input w-full"
-                          value={values[field.name] ?? ""}
-                          onChange={(e) =>
-                            setValues((v) => ({ ...v, [field.name]: e.target.value }))
-                          }
-                        >
-                          {!field.required && <option value="">—</option>}
-                          {(field.options || []).map((opt) => {
-                            const o = normalizeOption(opt);
-                            return (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      ) : (
-                        <input
-                          ref={idx === 0 ? (el) => (firstFieldRef.current = el) : undefined}
-                          className="input w-full"
-                          placeholder={field.placeholder}
-                          value={values[field.name] ?? ""}
-                          onChange={(e) =>
-                            setValues((v) => ({ ...v, [field.name]: e.target.value }))
-                          }
-                        />
-                      )}
-                    </label>
-                  ))}
-                </div>
-                <div className="mt-5 flex justify-end gap-2">
-                  <button type="button" className="btn-ghost" onClick={cancel}>
-                    {dialog.options.cancelLabel || "Cancelar"}
-                  </button>
-                  <button type="submit" className="btn-primary">
-                    {dialog.options.confirmLabel || "Confirmar"}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                {dialog.options.message && (
-                  <p className="mb-4 mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    {dialog.options.message}
-                  </p>
-                )}
-                <div className="mt-5 flex justify-end gap-2">
-                  <button type="button" className="btn-ghost" onClick={cancel}>
-                    {dialog.options.cancelLabel || "Cancelar"}
-                  </button>
-                  <button
-                    type="button"
-                    className={
-                      dialog.options.danger
-                        ? "btn-danger"
-                        : "btn-primary"
-                    }
-                    onClick={acceptConfirm}
+            <div className="px-6">
+              {dialog.kind === "prompt" ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submitPrompt();
+                  }}
+                >
+                  {dialog.options.description && (
+                    <p className="mb-3 text-sm text-[var(--koda-text-muted)]">
+                      {dialog.options.description}
+                    </p>
+                  )}
+                  <div className="space-y-4">
+                    {dialog.options.fields.map((field, idx) => (
+                      <label key={field.name} className="block">
+                        <span className="field-muted mb-1.5 block">
+                          {field.label}
+                          {field.required && <span className="text-red-500"> *</span>}
+                        </span>
+                        {field.type === "select" ? (
+                          <select
+                            ref={idx === 0 ? (el) => (firstFieldRef.current = el) : undefined}
+                            className="input w-full"
+                            value={values[field.name] ?? ""}
+                            onChange={(e) =>
+                              setValues((v) => ({ ...v, [field.name]: e.target.value }))
+                            }
+                          >
+                            {!field.required && <option value="">—</option>}
+                            {(field.options || []).map((opt) => {
+                              const o = normalizeOption(opt);
+                              return (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        ) : (
+                          <input
+                            ref={idx === 0 ? (el) => (firstFieldRef.current = el) : undefined}
+                            className="input w-full"
+                            placeholder={field.placeholder}
+                            value={values[field.name] ?? ""}
+                            onChange={(e) =>
+                              setValues((v) => ({ ...v, [field.name]: e.target.value }))
+                            }
+                          />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2.5 border-t pt-5 pb-2"
+                    style={{ borderColor: "var(--koda-border)" }}
                   >
-                    {dialog.options.confirmLabel || "Confirmar"}
-                  </button>
-                </div>
-              </>
-            )}
+                    <button type="button" className="btn-secondary" onClick={cancel}>
+                      {dialog.options.cancelLabel || "Cancelar"}
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      {dialog.options.confirmLabel || "Confirmar"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  {dialog.options.message && (
+                    <p className="text-sm leading-relaxed text-[var(--koda-text-muted)]">
+                      {dialog.options.message}
+                    </p>
+                  )}
+                  <div className="mt-6 flex justify-end gap-2.5 border-t pt-5 pb-2"
+                    style={{ borderColor: "var(--koda-border)" }}
+                  >
+                    <button type="button" className="btn-secondary" onClick={cancel}>
+                      {dialog.options.cancelLabel || "Cancelar"}
+                    </button>
+                    {dialog.options.danger ? (
+                      <button type="button" className="btn-danger" onClick={acceptConfirm}>
+                        {dialog.options.confirmLabel || "Confirmar"}
+                      </button>
+                    ) : (
+                      <button type="button" className="btn-primary" onClick={acceptConfirm}>
+                        {dialog.options.confirmLabel || "Confirmar"}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

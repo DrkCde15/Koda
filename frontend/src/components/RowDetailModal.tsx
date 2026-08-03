@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Database, DatabaseItem, DatabaseProperty } from "@/types";
 import { CellEditor, getItemValue } from "@/components/DatabaseCells";
+import { Icon } from "@/components/ui/icons";
 
 interface RowDetailModalProps {
   db: Database;
@@ -23,6 +24,7 @@ export function RowDetailModal({ db, item, busy, onSave, onDelete, onClose }: Ro
   }, [onClose]);
 
   const firstProp = db.properties[0];
+  const firstTitle = firstProp ? (getItemValue(item, firstProp.id) as string) || "" : "";
 
   function change(prop: DatabaseProperty, value: string | number | null) {
     onSave(prop.id, value);
@@ -30,38 +32,45 @@ export function RowDetailModal({ db, item, busy, onSave, onDelete, onClose }: Ro
 
   return (
     <div
-      className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
+      className="animate-fade-in fixed inset-0 z-[55] flex items-center justify-center p-4"
+      style={{ background: "rgb(8 9 13 / 0.55)", backdropFilter: "blur(8px)" }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         ref={panelRef}
-        className="animate-scale-in flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl border border-zinc-200/80 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark"
+        className="animate-scale-in flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border bg-[var(--koda-surface)] shadow-float"
+        style={{ borderColor: "var(--koda-border)" }}
       >
-        <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3 dark:border-zinc-800">
-          <span className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-200">
-            Item #{item.id}
-          </span>
+        <div className="flex items-center justify-between border-b px-6 py-4"
+          style={{ borderColor: "var(--koda-border)" }}
+        >
+          <div className="flex items-center gap-2 text-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-300">
+              <Icon name="database" className="h-4 w-4" />
+            </span>
+<span className="font-semibold tracking-tight text-[var(--koda-text)]">
+              {firstTitle || `Item #${item.id}`}
+            </span>
+          </div>
           <button
             type="button"
-            className="rounded-md px-1.5 py-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="btn-icon h-8 w-8"
             onClick={onClose}
             aria-label="Fechar"
           >
-            ✕
+            <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+        <div className="flex-1 space-y-5 overflow-y-auto p-6">
           {firstProp && (
             <div>
-              <span className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {firstProp.name}
-              </span>
+              <span className="field-muted mb-1.5 block">{firstProp.name}</span>
               <input
-                className="w-full border-none bg-transparent text-2xl font-bold tracking-tight text-zinc-900 outline-none dark:text-white"
-                value={(getItemValue(item, firstProp.id) as string) || ""}
+                className="w-full border-none bg-transparent text-2xl font-bold tracking-tight text-[var(--koda-text)] outline-none placeholder:text-[var(--koda-text-faint)]"
+                value={firstTitle}
                 onChange={(e) => change(firstProp, e.target.value || null)}
                 disabled={busy}
                 placeholder="Sem título"
@@ -71,9 +80,9 @@ export function RowDetailModal({ db, item, busy, onSave, onDelete, onClose }: Ro
 
           {db.properties.slice(firstProp ? 1 : 0).map((prop) => (
             <div key={prop.id}>
-              <span className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <span className="field-muted mb-1.5 block">
                 {prop.name}
-                <span className="ml-1 normal-case text-zinc-400">({prop.type})</span>
+                <span className="ml-1.5 normal-case text-[var(--koda-text-faint)]">({prop.type})</span>
               </span>
               <CellEditor
                 prop={prop}
@@ -85,17 +94,20 @@ export function RowDetailModal({ db, item, busy, onSave, onDelete, onClose }: Ro
           ))}
         </div>
 
-        <div className="flex justify-between border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
+        <div className="flex items-center justify-between border-t px-6 py-4"
+          style={{ borderColor: "var(--koda-border)" }}
+        >
           <button
             type="button"
-            className="text-sm font-medium text-red-500 transition-colors hover:text-red-600 disabled:opacity-50"
+            className="btn-ghost !text-red-500 hover:!bg-red-500/10 hover:!text-red-600"
             onClick={onDelete}
             disabled={busy}
           >
-            🗑 Excluir item
+            <Icon name="trash" className="h-4 w-4" />
+            Excluir item
           </button>
           <button type="button" className="btn-primary" onClick={onClose}>
-            Fechar
+            Concluído
           </button>
         </div>
       </div>

@@ -754,21 +754,22 @@ export function BlockEditor({
 
   return (
     <EditorPageContext.Provider value={{ workspaceId, pageId }}>
-      <div className="mb-3 flex flex-wrap gap-1 rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-soft-sm dark:border-zinc-800 dark:bg-surface-dark">
+      <div className="sticky top-5 z-20 mb-6 flex w-full flex-wrap items-center gap-1 rounded-2xl border border-[var(--koda-border)] bg-[var(--koda-surface)]/80 p-1.5 shadow-soft backdrop-blur-xl">
         <ToolbarButton label="B" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} />
         <ToolbarButton label="I" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} />
         <ToolbarButton label="H1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} />
         <ToolbarButton label="H2" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} />
         <ToolbarButton label="H3" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })} />
+        <span className="mx-1 h-5 w-px self-center bg-[var(--koda-border)]" />
         <ToolbarButton label="• Lista" onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")} />
         <ToolbarButton label="1. Lista" onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")} />
-        <ToolbarButton label="❝ Citação" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
-        <ToolbarButton label="</> Código" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive("codeBlock")} />
-        <ToolbarButton label="― Divisor" onClick={() => editor?.chain().focus().setHorizontalRule().run()} />
-        <span className="mx-1 w-px self-stretch bg-zinc-200 dark:bg-zinc-700" />
-        <ToolbarButton label="📄 Subpágina" onClick={insertSubpage} />
-        <ToolbarButton label="🗃️ Tabela" onClick={insertTable} />
-        <ToolbarButton label="📎 Arquivo/Imagem" onClick={() => fileInputRef.current?.click()} />
+        <ToolbarButton label="❝" title="Citação" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
+        <ToolbarButton label="</>" title="Bloco de código" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive("codeBlock")} />
+        <ToolbarButton label="―" title="Divisor" onClick={() => editor?.chain().focus().setHorizontalRule().run()} />
+        <span className="mx-1 h-5 w-px self-center bg-[var(--koda-border)]" />
+        <ToolbarButton label="📄" title="Subpágina" onClick={insertSubpage} />
+        <ToolbarButton label="🗃️" title="Inserir tabela" onClick={insertTable} />
+        <ToolbarButton label="📎" title="Arquivo/Imagem" onClick={() => fileInputRef.current?.click()} />
       </div>
       <input
         ref={fileInputRef}
@@ -793,19 +794,22 @@ function ToolbarButton({
   label,
   onClick,
   active,
+  title,
 }: {
   label: string;
   onClick: () => void;
   active?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
+      title={title ?? label}
       onClick={onClick}
-      className={`rounded-md px-2 py-1 text-sm transition-colors ${
+      className={`min-w-8 rounded-lg px-2 py-1.5 text-sm font-medium transition-all duration-150 active:scale-95 ${
         active
-          ? "bg-brand-600 text-white shadow-sm"
-          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          ? "bg-brand-gradient text-white shadow-glow-brand"
+          : "text-[var(--koda-text-muted)] hover:bg-[var(--koda-surface-2)] hover:text-[var(--koda-text)]"
       }`}
     >
       {label}

@@ -2,154 +2,413 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   KODA PREMIUM DESIGN SYSTEM
+---------------------------------------------------------------------------- */
+
 :root {
-  --koda-bg: #f7f7f8;
+  --koda-bg: #f6f7f9;
+  --koda-bg-soft: #fbfbfc;
   --koda-surface: #ffffff;
-  --koda-border: #e4e4e7;
-  --koda-text: #18181b;
-  --koda-text-muted: #71717a;
+  --koda-surface-2: #f3f5f8;
+  --koda-border: #e6e8ee;
+  --koda-border-strong: #d7dbe3;
+  --koda-text: #161a22;
+  --koda-text-muted: #67748b;
+  --koda-text-faint: #98a1b3;
+  --koda-glow: 93 91 239;
+  --koda-violet: 139 92 246;
+
+  color-scheme: light;
 }
 
 .dark {
-  --koda-bg: #0b0f19;
-  --koda-surface: #12161f;
-  --koda-border: #262b38;
-  --koda-text: #f4f4f5;
-  --koda-text-muted: #9ca1ad;
+  --koda-bg: #08090d;
+  --koda-bg-soft: #0d0f16;
+  --koda-surface: #0f1118;
+  --koda-surface-2: #161925;
+  --koda-border: #1e2230;
+  --koda-border-strong: #2a2f40;
+  --koda-text: #eef0f6;
+  --koda-text-muted: #9aa2b5;
+  --koda-text-faint: #6b7386;
+
+  color-scheme: dark;
 }
 
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
+
   body {
     background-color: var(--koda-bg);
     color: var(--koda-text);
+    font-feature-settings: "cv11", "ss01", "ss02";
+    letter-spacing: -0.011em;
   }
+
   ::selection {
-    @apply bg-brand-100 text-brand-900 dark:bg-brand-900/60 dark:text-brand-100;
+    @apply bg-brand-600/20 text-brand-800 dark:bg-brand-400/30 dark:text-brand-100;
   }
-  /* Refined scrollbars */
+
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
+    scrollbar-color: rgb(154 162 181 / 0.38) transparent;
   }
   *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
   *::-webkit-scrollbar-thumb {
-    border-radius: 8px;
-    background: rgb(161 161 170 / 0.45);
+    border-radius: 10px;
+    background: rgb(154 162 181 / 0.28);
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: rgb(161 161 170 / 0.7);
+    background: rgb(154 162 181 / 0.55);
+    background-clip: content-box;
   }
   *::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--koda-glow) / 0.55);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
+
+/* ---------------------------------------------------------------------------
+   SURFACE BACKDROPS
+---------------------------------------------------------------------------- */
+
+.bg-app {
+  background-color: var(--koda-bg);
+  background-image:
+    radial-gradient(42rem 32rem at 112% -8%, rgb(var(--koda-violet) / 0.08), transparent 62%),
+    radial-gradient(38rem 30rem at -14% 108%, rgb(var(--koda-glow) / 0.07), transparent 60%);
+}
+
+.aurora {
+  position: relative;
+  overflow: hidden;
+}
+.aurora::before,
+.aurora::after,
+.aurora .aurora-orb {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+}
+.aurora::before {
+  width: 34rem;
+  height: 34rem;
+  top: -12rem;
+  right: -8rem;
+  background: radial-gradient(circle, rgb(var(--koda-violet) / 0.28), transparent 65%);
+  animation: blob-drift 24s ease-in-out infinite;
+}
+.aurora::after {
+  width: 30rem;
+  height: 30rem;
+  bottom: -12rem;
+  left: -10rem;
+  background: radial-gradient(circle, rgb(var(--koda-glow) / 0.24), transparent 65%);
+  animation: blob-drift 28s ease-in-out infinite reverse;
+}
+
+.glass {
+  background: color-mix(in srgb, var(--koda-surface) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid color-mix(in srgb, var(--koda-border) 80%, transparent);
+}
+
+.glass-subtle {
+  background: color-mix(in srgb, var(--koda-surface) 55%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.text-gradient {
+  @apply bg-gradient-to-r from-brand-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent;
+  background-image: linear-gradient(100deg, #5d5bef 0%, #8a5cf6 55%, #d25fd6 100%);
+}
+
+.text-gradient-hero {
+  background-image: linear-gradient(120deg, #3d3aef 0%, #7c5cf6 45%, #cf5fd0 90%);
+  @apply bg-clip-text text-transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   COMPONENTS — buttons
+---------------------------------------------------------------------------- */
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+    @apply relative inline-flex select-none items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ease-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--koda-bg)] disabled:pointer-events-none disabled:opacity-50 active:scale-[0.985];
   }
+
   .btn-primary {
-    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow active:bg-brand-800;
+    @apply btn bg-brand-gradient text-white shadow-glow-brand;
   }
+  .btn-primary:hover {
+    @apply brightness-[1.06] shadow-glow-violet -translate-y-px;
+  }
+
   .btn-secondary {
-    @apply btn border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700;
+    @apply btn border border-[var(--koda-border)] bg-[var(--koda-surface)] text-[var(--koda-text)] shadow-soft-sm hover:border-[var(--koda-border-strong)] hover:bg-[var(--koda-surface-2)] hover:-translate-y-px hover:shadow-soft dark:border-[var(--koda-border)];
   }
+
   .btn-ghost {
-    @apply btn text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white;
+    @apply btn text-[var(--koda-text-muted)] hover:bg-[var(--koda-surface-2)] hover:text-[var(--koda-text)] dark:hover:text-white;
   }
+
   .btn-danger {
-    @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800;
+    @apply btn border border-red-500/20 bg-red-600 text-white shadow-glow-brand;
+    box-shadow: 0 6px 20px -8px rgb(239 68 68 / 0.5);
   }
+  .btn-danger:hover {
+    @apply brightness-105;
+    background-color: #dc2626;
+  }
+
+  /* Shimmer sweep on primary buttons */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%) skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .btn-primary:hover::after {
+    transform: translateX(120%) skewX(-18deg);
+  }
+
+  .btn-icon {
+    @apply flex h-9 w-9 items-center justify-center rounded-xl text-[var(--koda-text-muted)] transition-all duration-200 hover:bg-[var(--koda-surface-2)] hover:text-[var(--koda-text)] dark:hover:text-white active:scale-95;
+  }
+
+  /* --- Inputs ------------------------------------------------------- */
   .input {
-    @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm transition-shadow placeholder:text-zinc-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-brand-400;
+    @apply w-full rounded-xl border bg-[var(--koda-surface)] px-3.5 py-2.5 text-sm text-[var(--koda-text)] shadow-soft-sm transition-all duration-200 placeholder:text-[var(--koda-text-faint)] focus:border-brand-500/60 focus:outline-none focus:ring-4 focus:ring-brand-500/10;
+    border-color: var(--koda-border);
   }
+  .input:focus {
+    border-color: rgb(var(--koda-glow) / 0.55);
+    box-shadow: 0 0 0 4px rgb(var(--koda-glow) / 0.12);
+  }
+  .input:disabled {
+    @apply cursor-not-allowed opacity-60;
+    background: var(--koda-surface-2);
+  }
+
+  .field {
+    @apply block text-sm font-medium text-[var(--koda-text)] transition-colors;
+  }
+  .field-muted {
+    @apply text-xs font-medium uppercase tracking-wider text-[var(--koda-text-faint)];
+  }
+
+  /* Cards ------------------------------------------------------------ */
   .card {
-    @apply rounded-xl border border-zinc-200/80 bg-white p-5 shadow-soft-sm dark:border-zinc-800 dark:bg-surface-dark;
+    @apply rounded-2xl border bg-[var(--koda-surface)] transition-all duration-300;
+    border-color: var(--koda-border);
+    box-shadow: 0 1px 2px rgb(16 24 40 / 0.03), 0 1px 3px rgb(16 24 40 / 0.04);
   }
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1;
+    box-shadow: var(--tw-shadow);
+  }
+  .card-hover:hover {
+    border-color: rgb(var(--koda-glow) / 0.35);
+    box-shadow: 0 20px 50px -16px rgb(16 24 40 / 0.22), 0 0 0 1px rgb(var(--koda-glow) / 0.12);
+  }
+
+  .card-glass {
+    @apply glass rounded-2xl shadow-soft;
+  }
+
+  /* Chips & pills ----------------------------------------------------- */
   .kbd {
-    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-zinc-300 bg-zinc-50 px-1.5 font-sans text-[10px] font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400;
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded-md border px-1.5 font-sans text-[10px] font-semibold text-[var(--koda-text-muted)];
+    background: var(--koda-surface-2);
+    border-color: var(--koda-border);
+    box-shadow: inset 0 -1px 0 rgb(16 24 40 / 0.06);
   }
+
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all;
+    background: var(--koda-surface-2);
+    color: var(--koda-text-muted);
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-200;
+    background: var(--koda-surface);
+    border-color: var(--koda-border);
+    color: var(--koda-text-muted);
+  }
+  .chip:hover {
+    border-color: var(--koda-border-strong);
+    color: var(--koda-text);
+  }
+  .chip-active {
+    color: rgb(var(--koda-glow) / 1);
+    background: rgb(var(--koda-glow) / 0.08);
+    border-color: rgb(var(--koda-glow) / 0.3);
+  }
+
+  /* Nav links ---------------------------------------------------------- */
+  .nav-link {
+    @apply relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-[var(--koda-text-muted)] transition-all duration-200 hover:bg-[var(--koda-surface-2)] hover:text-[var(--koda-text)] dark:hover:text-white;
+  }
+  .nav-link-active {
+    color: var(--koda-text);
+    background: var(--koda-surface-2);
+  }
+  .nav-link-active::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    width: 3px;
+    height: 16px;
+    border-radius: 4px;
+    transform: translateY(-50%);
+    background: linear-gradient(180deg, #5d5bef, #a25bf5);
+    box-shadow: 0 2px 8px rgb(var(--koda-glow) / 0.5);
   }
 }
 
+/* ---------------------------------------------------------------------------
+   TABLES
+---------------------------------------------------------------------------- */
+
+.premium-table {
+  @apply w-full text-sm;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.premium-table thead th {
+  @apply px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--koda-text-faint)];
+  background: var(--koda-bg-soft);
+  border-bottom: 1px solid var(--koda-border);
+}
+.premium-table tbody td {
+  @apply px-3 py-2.5;
+  border-bottom: 1px solid color-mix(in srgb, var(--koda-border) 60%, transparent);
+}
+.premium-table tbody tr {
+  @apply transition-colors duration-150;
+}
+.premium-table tbody tr:hover {
+  background: color-mix(in srgb, var(--koda-surface-2) 60%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   EDITOR STYLING  (TipTap content)
+---------------------------------------------------------------------------- */
+
 .koda-editor {
-  @apply text-zinc-900 dark:text-zinc-100;
+  @apply text-[var(--koda-text)];
+  caret-color: rgb(var(--koda-glow) / 1);
 }
 .koda-editor:focus {
   outline: none;
 }
 .koda-editor h1 {
-  @apply mb-2 mt-4 text-3xl font-bold tracking-tight;
+  @apply mb-3 mt-5 text-[2rem] font-bold leading-snug tracking-tight;
 }
 .koda-editor h2 {
-  @apply mb-2 mt-3 text-2xl font-semibold tracking-tight;
+  @apply mb-2 mt-6 text-2xl font-semibold leading-snug tracking-tight;
 }
 .koda-editor h3 {
-  @apply mb-2 mt-2 text-xl font-semibold tracking-tight;
+  @apply mb-1.5 mt-5 text-xl font-semibold leading-snug tracking-tight;
 }
 .koda-editor p {
-  @apply my-2 leading-relaxed;
+  @apply my-2 text-[15px] leading-[1.75] text-[var(--koda-text)];
 }
 .koda-editor ul {
-  @apply my-2 list-disc pl-6;
+  @apply my-2 list-disc pl-6 text-[15px] leading-relaxed;
 }
 .koda-editor ol {
-  @apply my-2 list-decimal pl-6;
+  @apply my-2 list-decimal pl-6 text-[15px] leading-relaxed;
 }
 .koda-editor blockquote {
-  @apply my-2 border-l-4 border-zinc-300 pl-4 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300;
+  @apply my-3 border-l-2 pl-4 text-[var(--koda-text-muted)];
+  border-color: rgb(var(--koda-glow) / 0.5);
 }
 .koda-editor pre {
-  @apply my-2 overflow-x-auto rounded-lg bg-zinc-900 p-3 font-mono text-sm text-zinc-100;
+  @apply my-3 overflow-x-auto rounded-xl p-4 font-mono text-sm leading-relaxed text-zinc-100;
+  background: #10121c;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+.koda-editor code {
+  @apply rounded-md px-1.5 py-0.5 text-[0.85em] font-medium;
+  background: var(--koda-surface-2);
 }
 .koda-editor hr {
-  @apply my-4 border-zinc-300 dark:border-zinc-700;
+  @apply my-6 border-[var(--koda-border)];
+}
+.koda-editor a {
+  color: rgb(var(--koda-glow) / 1);
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--koda-glow) / 0.35);
+  text-underline-offset: 3px;
 }
 
 /* Toggle (details/summary) */
 .koda-editor details[data-koda-toggle] {
-  @apply my-2;
+  @apply my-2 rounded-xl border border-transparent transition-colors duration-200;
+}
+.koda-editor details[data-koda-toggle]:hover {
+  border-color: var(--koda-border);
 }
 .koda-editor details[data-koda-toggle] summary {
-  @apply flex cursor-pointer list-none items-center gap-1 font-medium;
+  @apply flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1 font-semibold transition-colors duration-200 hover:bg-[var(--koda-surface-2)];
+  user-select: none;
 }
 .koda-editor details[data-koda-toggle] summary::before {
   content: "▸";
-  @apply inline-block text-xs text-zinc-400 transition-transform;
+  @apply inline-block text-xs text-[var(--koda-text-faint)] transition-transform duration-300;
 }
 .koda-editor details[data-koda-toggle][open] summary::before {
-  @apply rotate-90;
+  @apply rotate-90 text-brand-500;
 }
 .koda-editor details[data-koda-toggle] summary p {
   @apply my-0;
 }
 .koda-editor details[data-koda-toggle] > div[data-toggle-body] {
-  @apply pl-6;
+  @apply ml-4 border-l border-[var(--koda-border)] pl-4;
 }
 
 /* Columns */
 .koda-editor [data-koda-columns] {
-  @apply my-2 flex gap-4;
+  @apply my-3 flex gap-5;
 }
 .koda-editor [data-koda-columns] > [data-column] {
-  @apply min-w-0 flex-1;
+  @apply min-w-0 flex-1 rounded-xl border border-[var(--koda-border)] px-3 py-2 transition-colors duration-200;
 }
 
 /* Callout */
 .koda-editor [data-koda-callout] {
-  @apply my-2 flex gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/60;
+  @apply my-3 flex items-start gap-3 rounded-2xl border px-4 py-3;
+  background: linear-gradient(135deg, rgb(var(--koda-glow) / 0.08), rgb(var(--koda-violet) / 0.06));
+  border-color: rgb(var(--koda-glow) / 0.2);
 }
 .koda-editor [data-koda-callout] .koda-callout-icon {
-  @apply select-none text-lg leading-7;
+  @apply select-none text-lg leading-6;
 }
 .koda-editor [data-koda-callout] .koda-callout-body {
   @apply flex-1;
@@ -160,10 +419,131 @@
 
 /* Inline member mentions (@) */
 .koda-editor span[data-mention] {
-  @apply mx-0.5 rounded-md bg-brand-100 px-1.5 py-0.5 font-medium text-brand-700 no-underline dark:bg-brand-600/30 dark:text-brand-200;
+  @apply mx-0.5 rounded-lg px-1.5 py-0.5 font-medium no-underline text-brand-600 dark:text-brand-300;
+  background: rgb(var(--koda-glow) / 0.1);
 }
 
 /* Todo-like marker for toggle summary paragraphs */
 p[data-toggle-summary] {
   @apply my-0;
+}
+
+/* Editor node cards */
+.koda-node-card {
+  @apply mt-0 mb-2 flex w-full cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft;
+  background: var(--koda-surface);
+  border-color: var(--koda-border);
+}
+.koda-node-card:hover {
+  border-color: rgb(var(--koda-glow) / 0.35);
+  box-shadow: 0 12px 30px -12px rgb(16 24 40 / 0.18), 0 0 0 1px rgb(var(--koda-glow) / 0.1);
+}
+
+/* ---------------------------------------------------------------------------
+   ROUTE TRANSITIONS
+---------------------------------------------------------------------------- */
+
+.page-enter {
+  animation: page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.995);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Staggered reveal helper */
+.reveal-elem {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-elem.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------------------
+   UTILITIES
+---------------------------------------------------------------------------- */
+
+.bg-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--koda-border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--koda-border) 55%, transparent) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 40%, transparent 100%);
+}
+
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgb(255 255 255 / 0.12) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: shine 5.5s ease-in-out infinite;
+}
+@keyframes shine {
+  0%, 70% { background-position: 200% 0; }
+  100% { background-position: -50% 0; }
+}
+
+.skeleton {
+  @apply relative overflow-hidden rounded-xl;
+  background: var(--koda-surface-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--koda-surface) 70%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.split-lines {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+}
+
+/* ---------------------------------------------------------------------------
+   MOTION & REDUCED-MOTION
+--------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal-elem {
+    opacity: 1;
+    transform: none;
+  }
+  .page-enter {
+    animation: none;
+  }
 }

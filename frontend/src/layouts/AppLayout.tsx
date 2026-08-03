@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -14,6 +14,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { getErrorMessage } from "@/utils/error";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { Icon } from "@/components/ui/icons";
 
 function ThemeToggle() {
   const theme = useThemeStore((s) => s.theme);
@@ -25,36 +26,27 @@ function ThemeToggle() {
       onClick={toggle}
       aria-label="Alternar tema (Ctrl+Shift+L)"
       title="Alternar tema (Ctrl+Shift+L)"
-      className="btn-ghost h-9 w-9 rounded-md p-0"
+      className="btn-icon relative overflow-hidden"
     >
-      {isDark ? (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </svg>
-      ) : (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      )}
+      <span
+        className="transition-all duration-500"
+        style={{
+          transform: isDark ? "rotate(0deg) scale(1)" : "rotate(90deg) scale(0)",
+          opacity: isDark ? 1 : 0,
+          position: "absolute",
+        }}
+      >
+        <Icon name="moon" />
+      </span>
+      <span
+        className="transition-all duration-500"
+        style={{
+          transform: isDark ? "rotate(-90deg) scale(0)" : "rotate(0deg) scale(1)",
+          opacity: isDark ? 0 : 1,
+        }}
+      >
+        <Icon name="sun" />
+      </span>
     </button>
   );
 }
@@ -65,6 +57,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (el.isContentEditable) return true;
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins}min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
 export function AppLayout({ children }: { children?: ReactNode }) {
@@ -78,6 +81,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement | null>(null);
 
   useRealtimeNotifications();
 
@@ -176,6 +180,17 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspaceId, handleNewPage]);
 
+  useEffect(() => {
+    if (!showNotifications) return;
+    const onClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [showNotifications]);
+
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
@@ -188,79 +203,126 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
+  const firstName = user?.full_name?.split(" ")[0] ?? "usuário";
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+
   return (
-    <div className="flex h-screen bg-[var(--koda-bg)] text-zinc-800 dark:text-zinc-100">
+    <div className="bg-app flex h-screen text-[var(--koda-text)]">
       <Sidebar workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} />
 
-      <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white px-6 py-2.5 dark:border-zinc-800 dark:bg-surface-dark">
-          <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            Olá, {user?.full_name?.split(" ")[0] ?? "usuário"}
-          </span>
-          <div className="flex items-center gap-2.5">
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* ---- Glass top bar ---- */}
+        <header className="glass-subtle z-30 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5 lg:px-6"
+          style={{ borderColor: "var(--koda-border)" }}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="btn-icon shrink-0 lg:hidden"
+              title="Recolher/expandir sidebar"
+            >
+              <Icon name="grid" />
+            </button>
+            <div className="hidden min-w-0 items-center gap-2 text-sm md:flex">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-gradient text-sm text-white shadow-glow-brand">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  firstName.charAt(0).toUpperCase()
+                )}
+              </span>
+              <span className="truncate font-medium text-[var(--koda-text-muted)]">
+                Olá, <span className="font-semibold text-[var(--koda-text)]">{firstName}</span>
+              </span>
+              {activeWs && (
+                <>
+                  <span className="mx-1 h-4 w-px bg-[var(--koda-border)]" />
+                  <span className="flex items-center gap-1.5 truncate text-[var(--koda-text-muted)]">
+                    <span className="text-xs">{activeWs.icon || "📁"}</span>
+                    {activeWs.name}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-9 w-64 items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-400 shadow-sm transition-colors hover:border-zinc-300 hover:text-zinc-500 sm:flex dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400 dark:hover:border-zinc-600"
+              className="group hidden h-9 w-64 items-center justify-between gap-2 rounded-xl border bg-[var(--koda-surface)] px-3 text-sm text-[var(--koda-text-faint)] shadow-soft-sm transition-all duration-200 hover:border-brand-500/40 hover:text-[var(--koda-text-muted)] sm:flex"
+              style={{ borderColor: "var(--koda-border)" }}
               title="Buscar (Ctrl+K)"
             >
-              <span className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
+              <span className="flex items-center gap-2.5">
+                <Icon name="search" className="h-4 w-4" />
                 Buscar…
               </span>
               <kbd className="kbd">Ctrl K</kbd>
             </button>
-            <div className="relative">
+
+            <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => setShowNotifications((value) => !value)}
-                className="btn-ghost relative h-9 rounded-lg px-3 text-sm"
+                onClick={() => setShowNotifications((v) => !v)}
+                className="btn-icon relative"
                 title="Notificações"
               >
-                🔔
+                <Icon name="bell" />
                 {unreadCount > 0 && (
-                  <span className="badge absolute -right-1.5 -top-1.5 h-4 min-w-4 bg-red-600 px-1 text-[10px] font-semibold text-white">
+                  <span className="animate-pop absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-rose-500 px-1 text-[10px] font-bold text-white shadow">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </button>
+
               {showNotifications && (
-                <div className="animate-scale-in absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark">
-                  <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+                <div className="animate-slide-down absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border bg-[var(--koda-surface)] shadow-float"
+                  style={{ borderColor: "var(--koda-border)" }}
+                >
+                  <div className="flex items-center justify-between border-b px-4 py-3"
+                    style={{ borderColor: "var(--koda-border)" }}
+                  >
                     <span className="text-sm font-semibold tracking-tight">Notificações</span>
-                    <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => setShowNotifications(false)}>
-                      Fechar
-                    </button>
+                    {unreadCount > 0 && (
+                      <span className="badge bg-brand-500/10 text-brand-600 dark:text-brand-300">
+                        {unreadCount} nova{unreadCount > 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
                   {notifications.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm text-zinc-500">Nenhuma notificação ainda.</p>
+                    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--koda-surface-2)] text-[var(--koda-text-faint)]">
+                        <Icon name="bell" className="h-4 w-4" />
+                      </span>
+                      <p className="text-sm text-[var(--koda-text-muted)]">Nenhuma notificação ainda.</p>
+                    </div>
                   ) : (
-                    <ul className="max-h-80 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">
-                      {notifications.slice(0, 6).map((item) => (
-                        <li key={item.id} className="px-4 py-2.5 text-sm">
-                          <div className="flex items-start justify-between gap-2">
+                    <ul className="max-h-80 divide-y divide-[var(--koda-border)] overflow-y-auto">
+                      {notifications.slice(0, 8).map((item) => (
+                        <li key={item.id} className={`px-4 py-3 transition-colors duration-150 ${!item.is_read ? "bg-brand-500/[0.04]" : ""}`}>
+                          <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                              <p className="line-clamp-2 text-zinc-500 dark:text-zinc-400">{item.body}</p>
+                              <p className="truncate text-sm font-semibold text-[var(--koda-text)]">
+                                {!item.is_read && (
+                                  <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand-500 align-middle" />
+                                )}
+                                {item.title}
+                              </p>
+                              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--koda-text-muted)]">
+                                {item.body}
+                              </p>
+                              <p className="mt-1 text-[10px] font-medium text-[var(--koda-text-faint)]">
+                                {timeAgo(item.created_at)}
+                              </p>
                             </div>
                             {!item.is_read && (
                               <button
-                                className="shrink-0 text-xs font-medium text-brand-600 hover:text-brand-700"
+                                className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-500/10 dark:text-brand-300"
                                 onClick={() => handleReadNotification(item.id)}
                               >
-                                Marcar lida
+                                Ler
                               </button>
                             )}
                           </div>
@@ -271,17 +333,28 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 </div>
               )}
             </div>
+
             <ThemeToggle />
-            <Link to="/profile" className="btn-ghost h-9 rounded-lg px-3 text-sm">
-              Perfil
+
+            <Link to="/profile" className="btn-icon" title="Perfil">
+              <Icon name="settings" />
             </Link>
-            <button onClick={handleLogout} className="btn-ghost h-9 rounded-lg px-3 text-sm">
-              Sair
+
+            <button
+              onClick={handleLogout}
+              className="btn-icon hover:!text-red-500"
+              title="Sair"
+            >
+              <Icon name="logout" />
             </button>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-6">
-          {children ?? <Outlet />}
+
+        {/* ---- Page content with route transition ---- */}
+        <div className="flex-1 overflow-y-auto">
+          <div key={location.pathname} className="page-enter mx-auto h-full w-full max-w-[1400px]">
+            {children ?? <Outlet />}
+          </div>
         </div>
       </main>
 

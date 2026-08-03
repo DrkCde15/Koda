@@ -174,14 +174,22 @@ export function CommandPalette({ open, currentWorkspaceId, onClose }: CommandPal
 
   return (
     <div
-      className="animate-fade-in fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 p-4 pt-[12vh] backdrop-blur-sm"
+      className="animate-fade-in fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]"
+      style={{ background: "rgb(8 9 13 / 0.55)", backdropFilter: "blur(8px)" }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="animate-scale-in w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark">
-        <div className="flex items-center gap-2 border-b border-zinc-100 px-4 dark:border-zinc-800">
-          <span className="text-zinc-400">
+      <div className="animate-blur-in w-full max-w-xl overflow-hidden rounded-3xl border bg-[var(--koda-surface)] shadow-float"
+        style={{ borderColor: "var(--koda-border)" }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgb(var(--koda-glow) / 0.6), transparent)" }}
+        />
+        <div className="flex items-center gap-2.5 border-b px-4" style={{ borderColor: "var(--koda-border)" }}>
+          <span className="text-[var(--koda-text-faint)]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -198,14 +206,14 @@ export function CommandPalette({ open, currentWorkspaceId, onClose }: CommandPal
           </span>
           <input
             ref={inputRef}
-            className="w-full bg-transparent py-3 text-sm text-zinc-900 outline-none dark:text-white"
+            className="w-full bg-transparent py-3.5 text-[15px] text-[var(--koda-text)] outline-none placeholder:text-[var(--koda-text-faint)]"
             placeholder="Buscar páginas ou digite um comando…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           {query && (
             <button
-              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              className="btn-icon h-7 w-7"
               onClick={() => setQuery("")}
             >
               ✕
@@ -215,52 +223,52 @@ export function CommandPalette({ open, currentWorkspaceId, onClose }: CommandPal
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto py-1">
-          <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <p className="px-3.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--koda-text-faint)]">
             Ações
           </p>
           {actions.map((a, idx) => (
             <button
               key={a.id}
               type="button"
-              className={`mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+              className={`mx-1.5 flex w-[calc(100%-0.75rem)] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors duration-100 ${
                 idx === active
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-                  : "text-zinc-700 dark:text-zinc-200"
+                  ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+                  : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
               }`}
               onMouseEnter={() => setActive(idx)}
               onClick={() => select(idx)}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 text-sm dark:bg-zinc-800">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--koda-surface-2)] text-sm">
                 {a.icon}
               </span>
               <span className="font-medium">{a.label}</span>
-              {a.hint && <span className="ml-auto text-xs text-zinc-400">{a.hint}</span>}
+              {a.hint && <span className="ml-auto text-xs text-[var(--koda-text-faint)]">{a.hint}</span>}
             </button>
           ))}
 
           {query.trim() && (
             <>
-              <p className="px-3 py-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                Páginas {searching && "…"}
+              <p className="px-3.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--koda-text-faint)]">
+                Páginas {searching && <span className="animate-pulse-soft">…</span>}
               </p>
               {hits.length === 0 && !searching && (
-                <p className="px-3 py-2 text-sm text-zinc-400">Nenhuma página encontrada.</p>
+                <p className="px-3.5 py-2 text-sm text-[var(--koda-text-faint)]">Nenhuma página encontrada.</p>
               )}
               {hits.map((hit, idx) => (
                 <button
                   key={hit.page.id}
                   type="button"
-                  className={`mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+                  className={`mx-1.5 flex w-[calc(100%-0.75rem)] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors duration-100 ${
                     idx + actions.length === active
-                      ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-                      : "text-zinc-700 dark:text-zinc-200"
+                      ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+                      : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
                   }`}
                   onMouseEnter={() => setActive(idx + actions.length)}
                   onClick={() => select(idx + actions.length)}
                 >
                   <span className="text-sm">{hit.page.icon || "📄"}</span>
                   <span className="truncate font-medium">{hit.page.title}</span>
-                  <span className="ml-auto shrink-0 text-xs text-zinc-400">
+                  <span className="ml-auto shrink-0 text-xs text-[var(--koda-text-faint)]">
                     {hit.workspace.icon || "📁"} {hit.workspace.name}
                   </span>
                 </button>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Database, DatabaseItem, DatabaseProperty } from "@/types";
 import { getItemTitle, getItemValue } from "@/components/DatabaseCells";
+import { Icon } from "@/components/ui/icons";
 
 const NONE = "__none__";
 
@@ -15,17 +16,17 @@ interface KanbanBoardProps {
 }
 
 const COLORS = [
-  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
-  "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-  "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  { dot: "bg-sky-500", soft: "text-sky-700 bg-sky-500/12 dark:text-sky-300 dark:bg-sky-500/15" },
+  { dot: "bg-emerald-500", soft: "text-emerald-700 bg-emerald-500/12 dark:text-emerald-300 dark:bg-emerald-500/15" },
+  { dot: "bg-amber-500", soft: "text-amber-700 bg-amber-500/12 dark:text-amber-300 dark:bg-amber-500/15" },
+  { dot: "bg-rose-500", soft: "text-rose-700 bg-rose-500/12 dark:text-rose-300 dark:bg-rose-500/15" },
+  { dot: "bg-violet-500", soft: "text-violet-700 bg-violet-500/12 dark:text-violet-300 dark:bg-violet-500/15" },
+  { dot: "bg-fuchsia-500", soft: "text-fuchsia-700 bg-fuchsia-500/12 dark:text-fuchsia-300 dark:bg-fuchsia-500/15" },
+  { dot: "bg-teal-500", soft: "text-teal-700 bg-teal-500/12 dark:text-teal-300 dark:bg-teal-500/15" },
+  { dot: "bg-orange-500", soft: "text-orange-700 bg-orange-500/12 dark:text-orange-300 dark:bg-orange-500/15" },
 ];
 
-export function colorFor(label: string): string {
+export function colorStyleFor(label: string): { dot: string; soft: string } {
   let hash = 0;
   for (let i = 0; i < label.length; i++) {
     hash = (hash * 31 + label.charCodeAt(i)) | 0;
@@ -86,101 +87,111 @@ export function KanbanBoard({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Agrupar por:</span>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--koda-text-faint)]">
+          Agrupar por
+        </span>
         {showGroupPicker ? (
           <select
-            className="input w-48 py-1"
+            className="input w-52 !py-1.5"
             value={groupProp.id}
             onChange={(e) => onGroupPropChange(Number(e.target.value))}
           >
             {db.properties
               .filter((p) => p.type === "select" || p.type === "status")
               .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
           </select>
         ) : (
-          <span className="font-medium">{groupProp.name}</span>
+          <span className="chip chip-active">{groupProp.name}</span>
         )}
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {columns.map((col) => (
-          <div
-            key={col.key}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setOverKey(col.key);
-            }}
-            onDragLeave={() => setOverKey((k) => (k === col.key ? null : k))}
-            onDrop={() => drop(col)}
-            className={`w-64 shrink-0 rounded-xl border bg-zinc-50/80 p-2 dark:bg-zinc-900/50 ${
-              overKey === col.key
-                ? "border-brand-500 ring-2 ring-brand-500/30"
-                : "border-zinc-200/80 dark:border-zinc-800"
-            }`}
-          >
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colorFor(col.label)}`}>
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1">
+        {columns.map((col) => {
+          const colors = colorStyleFor(col.label);
+          return (
+            <div
+              key={col.key}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOverKey(col.key);
+              }}
+              onDragLeave={() => setOverKey((k) => (k === col.key ? null : k))}
+              onDrop={() => drop(col)}
+              className={`w-72 shrink-0 rounded-2xl border p-2.5 transition-all duration-200 ${
+                overKey === col.key
+                  ? "border-brand-500/60 bg-brand-500/[0.05] ring-2 ring-brand-500/20"
+                  : "border-[var(--koda-border)] bg-[var(--koda-surface)]/60"
+              }`}
+            >
+              <div className="mb-2.5 flex items-center justify-between px-1.5">
+                <span className="flex items-center gap-2 text-sm font-semibold text-[var(--koda-text)]">
+                  <span className={`h-2 w-2 rounded-full ${colors.dot}`} />
                   {col.label}
+                  <span className="badge !bg-[var(--koda-surface-2)] !text-[var(--koda-text-muted)]">
+                    {col.items.length}
+                  </span>
                 </span>
-                <span className="text-xs text-zinc-400">{col.items.length}</span>
-              </span>
-              <button
-                type="button"
-                className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
-                title="Adicionar card"
-                onClick={() => onAddItem(col.value)}
-                disabled={busy}
-              >
-                ＋
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {col.items.map((item) => (
-                <div
-                  key={item.id}
-                  draggable={!busy}
-                  onDragStart={() => setDragId(item.id)}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOverKey(null);
-                  }}
-                  onClick={() => onOpenItem(item)}
-                  className="cursor-pointer rounded-lg border border-zinc-200/80 bg-white p-2.5 shadow-soft-sm transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-soft dark:border-zinc-700 dark:bg-zinc-800"
+                <button
+                  type="button"
+                  className="btn-icon h-7 w-7"
+                  title="Adicionar card"
+                  onClick={() => onAddItem(col.value)}
+                  disabled={busy}
                 >
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                    {getItemTitle(item, db.properties)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {db.properties
-                      .filter((p) => p.id !== groupProp.id)
-                      .map((p) => {
-                        const v = getItemValue(item, p.id);
-                        if (v === null || v === "") return null;
-                        return (
-                          <span
-                            key={p.id}
-                            className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300"
-                          >
-                            {String(v)}
-                          </span>
-                        );
-                      })}
+                  <Icon name="plus" className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {col.items.map((item) => (
+                  <div
+                    key={item.id}
+                    draggable={!busy}
+                    onDragStart={() => setDragId(item.id)}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverKey(null);
+                    }}
+                    onClick={() => onOpenItem(item)}
+                    className={`group cursor-pointer rounded-xl border border-[var(--koda-border)] bg-[var(--koda-surface)] p-3 shadow-soft-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft ${dragId === item.id ? "opacity-40" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium leading-snug text-[var(--koda-text)]">
+                        {getItemTitle(item, db.properties)}
+                      </p>
+                      <Icon name="drag" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--koda-text-faint)] opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {db.properties
+                        .filter((p) => p.id !== groupProp.id)
+                        .map((p) => {
+                          const v = getItemValue(item, p.id);
+                          if (v === null || v === "") return null;
+                          return (
+                            <span
+                              key={p.id}
+                              className="rounded-lg bg-[var(--koda-surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--koda-text-muted)]"
+                            >
+                              {String(v)}
+                            </span>
+                          );
+                        })}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {col.items.length === 0 && (
-                <p className="px-1 text-xs text-gray-400">Nenhum item</p>
-              )}
+                ))}
+                {col.items.length === 0 && (
+                  <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[var(--koda-border)] px-3 py-6 text-center">
+                    <Icon name="drag" className="h-4 w-4 text-[var(--koda-text-faint)]" />
+                    <p className="text-xs text-[var(--koda-text-faint)]">Solte um card aqui</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

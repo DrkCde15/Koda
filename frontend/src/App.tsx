@@ -7,6 +7,7 @@ import { LoginPage } from "@/pages/Login";
 import { RegisterPage } from "@/pages/Register";
 import { ForgotPasswordPage } from "@/pages/ForgotPassword";
 import { ResetPasswordPage } from "@/pages/ResetPassword";
+import { RouteLoader } from "@/components/ui/primitives";
 
 const DashboardPage = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.DashboardPage }))
@@ -23,7 +24,7 @@ const ProfilePage = lazy(() =>
 );
 
 function PageFallback() {
-  return <div className="p-8 text-gray-500 dark:text-gray-300">Carregando…</div>;
+  return <RouteLoader label="Carregando" />;
 }
 
 /** Wrapper that forces a full remount of PageViewPage when the page ID changes */

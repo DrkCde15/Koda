@@ -42,22 +42,20 @@ export interface CellEditorProps {
 export function CellEditor({ prop, value, onChange, disabled, compact }: CellEditorProps) {
   const isSelect = prop.type === "select" || prop.type === "status";
   const inputClass = compact
-    ? "w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-gray-300 focus:border-brand-500 focus:bg-white dark:hover:border-gray-600 dark:focus:bg-gray-900"
+    ? "w-full rounded-lg border border-transparent bg-transparent px-2.5 py-1.5 text-sm outline-none transition-all duration-150 hover:border-[var(--koda-border-strong)] focus:border-brand-500/60 focus:bg-[var(--koda-surface)] focus:shadow-soft-sm dark:hover:border-[var(--koda-border-strong)]"
     : "input";
 
   if (isSelect) {
     return (
       <select
-        className={compact ? "input w-full py-1 text-sm" : "input"}
+        className={compact ? "input !w-full !py-1.5 !rounded-lg text-sm" : "input"}
         value={(value as string) || ""}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
       >
         <option value="">—</option>
         {(prop.options?.choices || []).map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
+          <option key={c} value={c}>{c}</option>
         ))}
       </select>
     );
@@ -90,6 +88,7 @@ export function CellEditor({ prop, value, onChange, disabled, compact }: CellEdi
       value={(value as string) || ""}
       onChange={(e) => onChange(e.target.value || null)}
       disabled={disabled}
+      placeholder={compact ? "…" : "Digite…"}
     />
   );
 }

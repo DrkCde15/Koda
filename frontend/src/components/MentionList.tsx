@@ -126,8 +126,9 @@ export function MentionList({ editor, workspaceId, onSelect }: MentionListProps)
 
   return (
     <div
-      className="animate-scale-in fixed z-50 w-64 overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark"
+      className="animate-scale-in fixed z-50 w-64 overflow-hidden rounded-2xl border bg-[var(--koda-surface)] shadow-float"
       style={{
+        borderColor: "var(--koda-border)",
         top: placeAbove ? current.top - 12 : current.top + 24,
         left: Math.min(current.left, window.innerWidth - 280),
         transform: placeAbove ? "translateY(-100%)" : undefined,
@@ -136,21 +137,21 @@ export function MentionList({ editor, workspaceId, onSelect }: MentionListProps)
     >
       <ul className="max-h-72 overflow-y-auto py-1">
         {items.length === 0 && (
-          <li className="px-3 py-2 text-sm text-gray-400">Nenhum membro encontrado</li>
+          <li className="px-3 py-2 text-sm text-[var(--koda-text-faint)]">Nenhum membro encontrado</li>
         )}
         {items.map((member, idx) => (
           <li key={member.id}>
             <button
               type="button"
-              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+              className={`mx-1.5 flex w-[calc(100%-0.75rem)] items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors duration-100 ${
                 idx === active
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-600/20 dark:text-brand-200"
-                  : "text-gray-700 dark:text-gray-200"
+                  ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+                  : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
               }`}
               onMouseEnter={() => setActive(idx)}
               onClick={() => select(member)}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-600/30 dark:text-brand-200">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-gradient text-xs font-bold text-white shadow-glow-brand">
                 {member.avatar_url ? (
                   <img src={member.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (

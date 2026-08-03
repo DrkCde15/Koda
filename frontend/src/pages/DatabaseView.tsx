@@ -16,6 +16,8 @@ import { useDialog } from "@/contexts/DialogContext";
 import { CellEditor, getItemValue } from "@/components/DatabaseCells";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { RowDetailModal } from "@/components/RowDetailModal";
+import { Icon } from "@/components/ui/icons";
+import { Skeleton, Reveal } from "@/components/ui/primitives";
 
 const PROPERTY_TYPES: PropertyType[] = ["text", "number", "select", "date", "status"];
 
@@ -58,6 +60,26 @@ const OPERATORS_BY_TYPE: Record<PropertyType, OperatorOption[]> = {
     { value: "is_not_empty", label: "não está vazio" },
   ],
 };
+
+function Popover({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [onClose]);
+  return (
+    <div
+      ref={ref}
+      className="animate-scale-in absolute right-0 top-11 z-20 w-[26rem] max-w-[92vw] overflow-hidden rounded-2xl border bg-[var(--koda-surface)] p-4 shadow-float"
+      style={{ borderColor: "var(--koda-border)" }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function DatabaseView() {
   const { workspaceId, databaseId } = useParams<{
@@ -203,19 +225,8 @@ export default function DatabaseView() {
       confirmLabel: "Adicionar",
       fields: [
         { name: "name", label: "Nome da propriedade", required: true },
-        {
-          name: "type",
-          label: "Tipo",
-          type: "select",
-          required: true,
-          defaultValue: "text",
-          options: PROPERTY_TYPES,
-        },
-        {
-          name: "choices",
-          label: "Opções (separadas por vírgula, para select/status)",
-          placeholder: "Ex.: A fazer, Em andamento, Concluído",
-        },
+        { name: "type", label: "Tipo", type: "select", required: true, defaultValue: "text", options: PROPERTY_TYPES },
+        { name: "choices", label: "Opções (separadas por vírgula, para select/status)", placeholder: "Ex.: A fazer, Em andamento, Concluído" },
       ],
     });
     if (!result?.name) return;
@@ -225,9 +236,7 @@ export default function DatabaseView() {
     let options: { choices?: string[] } | undefined;
     if (type === "select" || type === "status") {
       if (result.choices)
-        options = {
-          choices: result.choices.split(",").map((s) => s.trim()).filter(Boolean),
-        };
+        options = { choices: result.choices.split(",").map((s) => s.trim()).filter(Boolean) };
     }
     setBusy(true);
     try {
@@ -327,13 +336,7 @@ export default function DatabaseView() {
       fields: [
         { name: "name", label: "Nome", defaultValue: prop.name, required: true },
         ...(isChoice
-          ? [
-              {
-                name: "choices",
-                label: "Opções (separadas por vírgula)",
-                defaultValue: (prop.options?.choices || []).join(", "),
-              },
-            ]
+          ? [{ name: "choices", label: "Opções (separadas por vírgula)", defaultValue: (prop.options?.choices || []).join(", ") }]
           : []),
       ],
     });
@@ -341,22 +344,14 @@ export default function DatabaseView() {
     const name = result.name;
     let options: { choices?: string[] } | undefined;
     if (isChoice) {
-      options = {
-        choices: (result.choices || "").split(",").map((s) => s.trim()).filter(Boolean),
-      };
+      options = { choices: (result.choices || "").split(",").map((s) => s.trim()).filter(Boolean) };
     }
     setBusy(true);
     try {
-      const updated = await databaseService.updateProperty(Number(databaseId), prop.id, {
-        name,
-        options,
-      });
+      const updated = await databaseService.updateProperty(Number(databaseId), prop.id, { name, options });
       setDb((prev) =>
         prev
-          ? {
-              ...prev,
-              properties: prev.properties.map((p) => (p.id === updated.id ? updated : p)),
-            }
+          ? { ...prev, properties: prev.properties.map((p) => (p.id === updated.id ? updated : p)) }
           : prev
       );
     } catch (e: any) {
@@ -387,15 +382,13 @@ export default function DatabaseView() {
     if (prop && (prop.type === "select" || prop.type === "status")) {
       return (
         <select
-          className="input flex-1 py-1"
+          className="input flex-1 !py-1.5"
           value={String(rule.value ?? "")}
           onChange={(e) => updateFilter(idx, { value: e.target.value || null })}
         >
           <option value="">—</option>
           {(prop.options?.choices || []).map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
       );
@@ -404,7 +397,7 @@ export default function DatabaseView() {
       return (
         <input
           type="number"
-          className="input flex-1 py-1"
+          className="input flex-1 !py-1.5"
           value={rule.value === null || rule.value === undefined ? "" : String(rule.value)}
           onChange={(e) =>
             updateFilter(idx, { value: e.target.value === "" ? null : Number(e.target.value) })
@@ -416,7 +409,7 @@ export default function DatabaseView() {
       return (
         <input
           type="date"
-          className="input flex-1 py-1"
+          className="input flex-1 !py-1.5"
           value={rule.value ? String(rule.value).slice(0, 10) : ""}
           onChange={(e) => updateFilter(idx, { value: e.target.value || null })}
         />
@@ -424,7 +417,7 @@ export default function DatabaseView() {
     }
     return (
       <input
-        className="input flex-1 py-1"
+        className="input flex-1 !py-1.5"
         value={(rule.value as string) || ""}
         onChange={(e) => updateFilter(idx, { value: e.target.value || null })}
         placeholder="Valor"
@@ -432,316 +425,370 @@ export default function DatabaseView() {
     );
   }
 
-  if (loading && !db) return <div className="p-6">Carregando…</div>;
-  if (error && !db) return <div className="p-6 text-red-500">{error}</div>;
+  if (loading && !db)
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-12 w-12" />
+            <Skeleton className="h-7 w-48" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        <Skeleton className="mt-8 h-12 w-full" />
+        <Skeleton className="mt-4 h-96 w-full" />
+      </div>
+    );
+  if (error && !db)
+    return (
+      <div className="flex flex-col items-center gap-3 py-24 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+          <Icon name="x" className="h-5 w-5" />
+        </span>
+        <p className="text-sm text-red-500">{error}</p>
+        <button className="btn-secondary" onClick={load}>Tentar novamente</button>
+      </div>
+    );
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
+      {/* Back */}
       <button
-        className="btn-ghost mb-4"
+        className="btn-ghost !py-1.5 text-xs"
         onClick={() => navigate(`/workspaces/${workspaceId}`)}
       >
-        ← Voltar ao workspace
+        <Icon name="arrowLeft" className="h-3.5 w-3.5" />
+        Voltar ao workspace
       </button>
 
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          {db?.icon && <span className="text-2xl">{db.icon}</span>}
-          <h1 className="text-xl font-semibold">{db?.name}</h1>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost" onClick={renameDatabase} disabled={busy}>
-            ✏️ Renomear
-          </button>
-          <button
-            className="btn-ghost text-red-500 hover:text-red-600"
-            onClick={deleteDatabase}
-            disabled={busy}
-          >
-            🗑 Excluir
-          </button>
-        </div>
-      </div>
-
-      {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-
-      <div className="mb-4 flex flex-wrap items-center gap-4 border-b border-zinc-200/80 text-sm dark:border-zinc-800">
-        <button
-          onClick={() => toggleView("grid")}
-          className={`pb-2 ${viewMode === "grid" ? "border-b-2 border-brand-600 font-medium" : "text-gray-500 dark:text-gray-300"}`}
-        >
-          🗃️ Tabela
-        </button>
-        <button
-          onClick={() => toggleView("board")}
-          className={`pb-2 ${viewMode === "board" ? "border-b-2 border-brand-600 font-medium" : "text-gray-500 dark:text-gray-300"}`}
-        >
-          📊 Quadro
-        </button>
-
-        <div className="relative ml-auto">
-          <div className="flex gap-2">
-            <button
-              className={`btn-ghost ${filterCount ? "text-brand-600" : ""}`}
-              onClick={() => openPopover("filter")}
-            >
-              🔍 Filtrar{filterCount > 0 ? ` (${filterCount})` : ""}
+      {/* Header */}
+      <Reveal delay={40}>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {db?.icon && <span className="text-3xl">{db.icon}</span>}
+            <div>
+              <h1 className="text-2xl font-bold tracking-tightest">{db?.name}</h1>
+              <p className="text-xs text-[var(--koda-text-faint)]">
+                {(db?.items || []).length} itens · {db?.properties.length} propriedades
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary" onClick={renameDatabase} disabled={busy}>
+              <Icon name="edit" className="h-4 w-4" />
+              Renomear
             </button>
             <button
-              className={`btn-ghost ${sortCount ? "text-brand-600" : ""}`}
-              onClick={() => openPopover("sort")}
+              className="btn-ghost !text-red-500 hover:!bg-red-500/10 hover:!text-red-600"
+              onClick={deleteDatabase}
+              disabled={busy}
             >
-              ↕️ Ordenar{sortCount > 0 ? ` (${sortCount})` : ""}
+              <Icon name="trash" className="h-4 w-4" />
+              Excluir
+            </button>
+          </div>
+        </div>
+      </Reveal>
+
+      {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
+
+      {/* Toolbar */}
+      <Reveal delay={100}>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="flex rounded-xl border border-[var(--koda-border)] bg-[var(--koda-surface)] p-1 shadow-soft-sm">
+            <button
+              onClick={() => toggleView("grid")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-200 ${
+                viewMode === "grid"
+                  ? "bg-brand-gradient text-white shadow-glow-brand"
+                  : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
+              }`}
+            >
+              <Icon name="grid" className="h-3.5 w-3.5" />
+              Tabela
+            </button>
+            <button
+              onClick={() => toggleView("board")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-200 ${
+                viewMode === "board"
+                  ? "bg-brand-gradient text-white shadow-glow-brand"
+                  : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
+              }`}
+            >
+              <Icon name="kanban" className="h-3.5 w-3.5" />
+              Quadro
             </button>
           </div>
 
-          {popover === "filter" && (
-            <div className="animate-scale-in absolute right-0 top-9 z-20 w-[26rem] max-w-[90vw] rounded-xl border border-zinc-200/80 bg-white p-3 shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold">Filtros</span>
-                <button
-                  className="text-xs text-brand-600 hover:underline"
-                  onClick={() => setFilterDraft([])}
-                >
-                  Limpar todos
-                </button>
-              </div>
-              {filterDraft.length === 0 && (
-                <p className="mb-2 text-sm text-gray-400">Nenhum filtro aplicado.</p>
-              )}
-              {filterDraft.map((rule, idx) => {
-                const prop = db?.properties.find((p) => p.id === rule.property_id);
-                return (
-                  <div key={idx} className="mb-2 flex flex-wrap items-center gap-2">
-                    <select
-                      className="input w-28 py-1"
-                      value={rule.property_id}
-                      onChange={(e) =>
-                        updateFilter(idx, {
-                          property_id: Number(e.target.value),
-                          operator: "equals",
-                          value: null,
-                        })
-                      }
-                    >
-                      {(db?.properties || []).map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="input w-32 py-1"
-                      value={rule.operator}
-                      onChange={(e) =>
-                        updateFilter(idx, { operator: e.target.value as FilterOperator })
-                      }
-                    >
-                      {OPERATORS_BY_TYPE[prop?.type || "text"].map((op) => (
-                        <option key={op.value} value={op.value}>
-                          {op.label}
-                        </option>
-                      ))}
-                    </select>
-                    {renderFilterValue(prop, rule, idx)}
-                    <button
-                      className="text-gray-400 hover:text-red-500"
-                      onClick={() =>
-                        setFilterDraft((d) => d.filter((_, i) => i !== idx))
-                      }
-                      title="Remover filtro"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
+          <div className="relative ml-auto">
+            <div className="flex gap-1.5">
               <button
-                className="btn-ghost"
-                onClick={() =>
-                  setFilterDraft((d) => [
-                    ...d,
-                    {
-                      property_id: db?.properties[0]?.id ?? 0,
-                      operator: "contains",
-                      value: null,
-                    },
-                  ])
-                }
+                className={`chip ${filterCount ? "chip-active" : ""}`}
+                onClick={() => openPopover("filter")}
               >
-                + Adicionar filtro
+                <Icon name="filter" className="h-3.5 w-3.5" />
+                Filtrar
+                {filterCount > 0 && <span className="badge !bg-brand-500 !text-white !px-1.5 !min-w-4">{filterCount}</span>}
+              </button>
+              <button
+                className={`chip ${sortCount ? "chip-active" : ""}`}
+                onClick={() => openPopover("sort")}
+              >
+                <Icon name="sort" className="h-3.5 w-3.5" />
+                Ordenar
+                {sortCount > 0 && <span className="badge !bg-brand-500 !text-white !px-1.5 !min-w-4">{sortCount}</span>}
               </button>
             </div>
-          )}
 
-          {popover === "sort" && (
-            <div className="animate-scale-in absolute right-0 top-9 z-20 w-80 max-w-[90vw] rounded-xl border border-zinc-200/80 bg-white p-3 shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold">Ordenação</span>
-                <button
-                  className="text-xs text-brand-600 hover:underline"
-                  onClick={() => setSortDraft([])}
-                >
-                  Limpar todas
-                </button>
-              </div>
-              {sortDraft.length === 0 && (
-                <p className="mb-2 text-sm text-gray-400">Nenhuma ordenação aplicada.</p>
-              )}
-              {sortDraft.map((rule, idx) => (
-                <div key={idx} className="mb-2 flex items-center gap-2">
-                  <select
-                    className="input flex-1 py-1"
-                    value={rule.property_id}
-                    onChange={(e) => updateSort(idx, { property_id: Number(e.target.value) })}
-                  >
-                    {(db?.properties || []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="input w-24 py-1"
-                    value={rule.direction}
-                    onChange={(e) =>
-                      updateSort(idx, { direction: e.target.value as SortDirection })
-                    }
-                  >
-                    <option value="asc">↑ Cresc.</option>
-                    <option value="desc">↓ Decresc.</option>
-                  </select>
+            {popover === "filter" && (
+              <Popover onClose={() => setPopover(null)}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[var(--koda-text)]">Filtros</span>
                   <button
-                    className="text-gray-400 hover:text-red-500"
-                    onClick={() => setSortDraft((d) => d.filter((_, i) => i !== idx))}
-                    title="Remover ordenação"
+                    className="text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-300"
+                    onClick={() => setFilterDraft([])}
                   >
-                    ✕
+                    Limpar todos
                   </button>
                 </div>
-              ))}
-              <button
-                className="btn-ghost"
-                onClick={() =>
-                  setSortDraft((d) => [
-                    ...d,
-                    { property_id: db?.properties[0]?.id ?? 0, direction: "asc" },
-                  ])
-                }
-              >
-                + Adicionar ordenação
+                {filterDraft.length === 0 && (
+                  <p className="mb-2 text-sm text-[var(--koda-text-faint)]">Nenhum filtro aplicado.</p>
+                )}
+                <div className="space-y-2">
+                  {filterDraft.map((rule, idx) => {
+                    const prop = db?.properties.find((p) => p.id === rule.property_id);
+                    return (
+                      <div key={idx} className="flex flex-wrap items-center gap-1.5">
+                        <select
+                          className="input w-28 !py-1.5"
+                          value={rule.property_id}
+                          onChange={(e) =>
+                            updateFilter(idx, { property_id: Number(e.target.value), operator: "equals", value: null })
+                          }
+                        >
+                          {(db?.properties || []).map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          className="input w-32 !py-1.5"
+                          value={rule.operator}
+                          onChange={(e) => updateFilter(idx, { operator: e.target.value as FilterOperator })}
+                        >
+                          {OPERATORS_BY_TYPE[prop?.type || "text"].map((op) => (
+                            <option key={op.value} value={op.value}>{op.label}</option>
+                          ))}
+                        </select>
+                        {renderFilterValue(prop, rule, idx)}
+                        <button
+                          className="btn-icon h-7 w-7 hover:!text-red-500"
+                          onClick={() => setFilterDraft((d) => d.filter((_, i) => i !== idx))}
+                          title="Remover filtro"
+                        >
+                          <Icon name="x" className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  className="btn-ghost !px-3 !py-1.5 mt-3 text-xs"
+                  onClick={() =>
+                    setFilterDraft((d) => [
+                      ...d,
+                      { property_id: db?.properties[0]?.id ?? 0, operator: "contains", value: null },
+                    ])
+                  }
+                >
+                  <Icon name="plus" className="h-3.5 w-3.5" />
+                  Adicionar filtro
+                </button>
+              </Popover>
+            )}
+
+            {popover === "sort" && (
+              <Popover onClose={() => setPopover(null)}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[var(--koda-text)]">Ordenação</span>
+                  <button
+                    className="text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-300"
+                    onClick={() => setSortDraft([])}
+                  >
+                    Limpar todas
+                  </button>
+                </div>
+                {sortDraft.length === 0 && (
+                  <p className="mb-2 text-sm text-[var(--koda-text-faint)]">Nenhuma ordenação aplicada.</p>
+                )}
+                <div className="space-y-2">
+                  {sortDraft.map((rule, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <select
+                        className="input flex-1 !py-1.5"
+                        value={rule.property_id}
+                        onChange={(e) => updateSort(idx, { property_id: Number(e.target.value) })}
+                      >
+                        {(db?.properties || []).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="input w-24 !py-1.5"
+                        value={rule.direction}
+                        onChange={(e) => updateSort(idx, { direction: e.target.value as SortDirection })}
+                      >
+                        <option value="asc">↑ Cresc.</option>
+                        <option value="desc">↓ Decresc.</option>
+                      </select>
+                      <button
+                        className="btn-icon h-7 w-7 hover:!text-red-500"
+                        onClick={() => setSortDraft((d) => d.filter((_, i) => i !== idx))}
+                        title="Remover ordenação"
+                      >
+                        <Icon name="x" className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="btn-ghost mt-3 px-3 py-1.5 text-xs"
+                  onClick={() =>
+                    setSortDraft((d) => [...d, { property_id: db?.properties[0]?.id ?? 0, direction: "asc" }])
+                  }
+                >
+                  <Icon name="plus" className="h-3.5 w-3.5" />
+                  Adicionar ordenação
+                </button>
+              </Popover>
+            )}
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Body */}
+      <Reveal delay={160}>
+        {viewMode === "board" ? (
+          groupProp && db ? (
+            <KanbanBoard
+              db={db}
+              groupProp={groupProp}
+              onGroupPropChange={(propId) => setGroupPropId(propId)}
+              busy={busy}
+              onMoveItem={(item, newValue) => saveCell(item, groupProp, newValue)}
+              onAddItem={(columnValue) => addItem([{ property_id: groupProp.id, value: columnValue }])}
+              onOpenItem={(item) => setSelectedItem(item)}
+            />
+          ) : (
+            <div className="card flex flex-col items-center gap-3 p-10 text-center text-sm text-[var(--koda-text-muted)]">
+              <Icon name="kanban" className="h-8 w-8 text-[var(--koda-text-faint)]" />
+              <p>
+                O quadro precisa de uma propriedade <b className="text-[var(--koda-text)]">select</b> ou{" "}
+                <b className="text-[var(--koda-text)]">status</b> para agrupar os itens.
+              </p>
+              <button className="btn-secondary" onClick={addProperty}>
+                <Icon name="plus" className="h-4 w-4" />
+                Adicionar propriedade
               </button>
             </div>
-          )}
-        </div>
-      </div>
-
-      {viewMode === "board" ? (
-        groupProp && db ? (
-          <KanbanBoard
-            db={db}
-            groupProp={groupProp}
-            onGroupPropChange={(propId) => setGroupPropId(propId)}
-            busy={busy}
-            onMoveItem={(item, newValue) =>
-              saveCell(item, groupProp, newValue)
-            }
-            onAddItem={(columnValue) =>
-              addItem([{ property_id: groupProp.id, value: columnValue }])
-            }
-            onOpenItem={(item) => setSelectedItem(item)}
-          />
+          )
         ) : (
-          <div className="card text-sm text-zinc-500 dark:text-zinc-400">
-            O quadro precisa de uma propriedade <b>select</b> ou <b>status</b> para agrupar os itens.
-            <button className="btn-ghost ml-2" onClick={addProperty}>
-              + Adicionar propriedade
-            </button>
-          </div>
-        )
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200/80 dark:border-zinc-800">
-                <th className="text-left p-2 w-10">#</th>
-                {db?.properties.map((prop) => (
-                  <th key={prop.id} className="text-left p-2 min-w-[160px]">
-                    <div className="flex items-center gap-2">
-                      <span>{prop.name}</span>
-                      <span className="text-xs text-gray-400">({prop.type})</span>
-                      <button
-                        className="text-gray-400 hover:text-brand-600"
-                        title="Editar propriedade"
-                        onClick={() => editProperty(prop)}
-                      >
-                        ✎
+          <div className="card overflow-hidden !p-0">
+            <div className="overflow-x-auto">
+              <table className="premium-table min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th className="w-12 text-center">#</th>
+                    {db?.properties.map((prop) => (
+                      <th key={prop.id} className="min-w-40">
+                        <div className="flex items-center gap-2">
+                          <span>{prop.name}</span>
+                          <span className="normal-case tracking-normal text-[10px] font-medium bg-[var(--koda-surface-2)] rounded px-1.5 py-0.5">
+                            {prop.type}
+                          </span>
+                          <div className="ml-1 flex items-center rounded-lg bg-[var(--koda-surface)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <button
+                              className="btn-icon h-6 w-6 !rounded-md"
+                              title="Editar propriedade"
+                              onClick={() => editProperty(prop)}
+                            >
+                              <Icon name="edit" className="h-3 w-3" />
+                            </button>
+                            <button
+                              className="btn-icon h-6 w-6 !rounded-md hover:!text-red-500"
+                              title="Remover propriedade"
+                              onClick={() => deleteProperty(prop)}
+                            >
+                              <Icon name="x" className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </th>
+                    ))}
+                    <th className="w-28">
+                      <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={addProperty} disabled={busy}>
+                        <Icon name="plus" className="h-3 w-3" />
+                        Propriedade
                       </button>
-                      <button
-                        className="text-gray-400 hover:text-red-500"
-                        title="Remover propriedade"
-                        onClick={() => deleteProperty(prop)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </th>
-                ))}
-                <th className="p-2">
-                  <button className="btn-ghost" onClick={addProperty} disabled={busy}>
-                    + Propriedade
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(db?.items || []).map((item, idx) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-zinc-100 transition-colors hover:bg-zinc-50 dark:border-zinc-800/70 dark:hover:bg-zinc-800/40"
-                >
-                  <td className="p-2 text-gray-400">{idx + 1}</td>
-                  {db?.properties.map((prop) => (
-                    <td key={prop.id} className="p-2">
-                      <CellEditor
-                        prop={prop}
-                        value={getItemValue(item, prop.id)}
-                        onChange={(v) => saveCell(item, prop, v)}
-                        disabled={busy}
-                        compact
-                      />
-                    </td>
+                    </th>
+                    <th className="w-24" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(db?.items || []).map((item, idx) => (
+                    <tr key={item.id} className="group">
+                      <td className="text-center font-mono text-xs text-[var(--koda-text-faint)]">{idx + 1}</td>
+                      {db?.properties.map((prop) => (
+                        <td key={prop.id}>
+                          <CellEditor
+                            prop={prop}
+                            value={getItemValue(item, prop.id)}
+                            onChange={(v) => saveCell(item, prop, v)}
+                            disabled={busy}
+                            compact
+                          />
+                        </td>
+                      ))}
+                      <td>
+                        <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={addProperty} disabled={busy}>
+                          <Icon name="plus" className="h-3 w-3" />
+                        </button>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            className="btn-icon h-7 w-7"
+                            title="Abrir item"
+                            onClick={() => setSelectedItem(item)}
+                          >
+                            <Icon name="external" className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            className="btn-icon h-7 w-7 hover:!text-red-500"
+                            title="Excluir item"
+                            onClick={() => deleteItem(item.id)}
+                            disabled={busy}
+                          >
+                            <Icon name="trash" className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                  <td className="p-2">
-                    <div className="flex gap-1">
-                      <button
-                        className="text-gray-400 hover:text-brand-600"
-                        title="Abrir item"
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        ⤢
-                      </button>
-                      <button
-                        className="text-gray-400 hover:text-red-500"
-                        title="Excluir item"
-                        onClick={() => deleteItem(item.id)}
-                        disabled={busy}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="p-3">
-            <button className="btn-ghost" onClick={() => addItem()} disabled={busy}>
-              + Adicionar item
-            </button>
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t px-4 py-3" style={{ borderColor: "var(--koda-border)" }}>
+              <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => addItem()} disabled={busy}>
+                <Icon name="plus" className="h-3.5 w-3.5" />
+                Adicionar item
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Reveal>
 
       {selectedItem && db && (
         <RowDetailModal

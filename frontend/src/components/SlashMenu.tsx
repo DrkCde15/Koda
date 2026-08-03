@@ -170,8 +170,9 @@ export function SlashMenu({ editor, onSelect }: SlashMenuProps) {
 
   return (
     <div
-      className="animate-scale-in fixed z-50 w-72 overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-surface-dark"
+      className="animate-scale-in fixed z-50 w-72 overflow-hidden rounded-2xl border bg-[var(--koda-surface)] shadow-float"
       style={{
+        borderColor: "var(--koda-border)",
         top: placeAbove ? current.top - 12 : current.top + 24,
         left: Math.min(current.left, window.innerWidth - 320),
         transform: placeAbove ? "translateY(-100%)" : undefined,
@@ -180,13 +181,13 @@ export function SlashMenu({ editor, onSelect }: SlashMenuProps) {
     >
       {showEmoji ? (
         <div className="p-2">
-          <p className="px-1 pb-2 text-xs font-medium text-gray-400">Emoji</p>
+          <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-[var(--koda-text-faint)]">Emoji</p>
           <div className="grid grid-cols-8 gap-1">
             {EMOJI_GRID.map((e) => (
               <button
                 key={e.id}
                 type="button"
-                className="rounded p-1 text-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="rounded-lg p-1 text-lg transition-all duration-100 hover:scale-110 hover:bg-[var(--koda-surface-2)] active:scale-95"
                 onClick={() => {
                   setState(null);
                   onSelect(e, current.range);
@@ -200,27 +201,27 @@ export function SlashMenu({ editor, onSelect }: SlashMenuProps) {
       ) : (
         <ul className="max-h-80 overflow-y-auto py-1">
           {items.length === 0 && (
-            <li className="px-3 py-2 text-sm text-gray-400">Nenhum bloco encontrado</li>
+            <li className="px-3 py-2 text-sm text-[var(--koda-text-faint)]">Nenhum bloco encontrado</li>
           )}
           {items.map((item, idx) => (
             <li key={item.id}>
               <button
                 type="button"
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+                className={`mx-1.5 flex w-[calc(100%-0.75rem)] items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors duration-100 ${
                   idx === active
-                    ? "bg-brand-50 text-brand-700 dark:bg-brand-600/20 dark:text-brand-200"
-                    : "text-gray-700 dark:text-gray-200"
+                    ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+                    : "text-[var(--koda-text-muted)] hover:text-[var(--koda-text)]"
                 }`}
                 onMouseEnter={() => setActive(idx)}
                 onClick={() => select(item)}
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded bg-gray-100 text-sm dark:bg-gray-700">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--koda-surface-2)] text-sm">
                   {item.icon}
                 </span>
                 <span className="flex-1">
                   <span className="font-medium">{item.label}</span>
                   {item.hint && (
-                    <span className="ml-2 text-xs text-gray-400">{item.hint}</span>
+                    <span className="ml-2 text-xs text-[var(--koda-text-faint)]">{item.hint}</span>
                   )}
                 </span>
               </button>
