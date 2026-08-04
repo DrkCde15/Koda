@@ -4,11 +4,9 @@
   <img src="frontend/public/logo.png" alt="Koda" />
 </p>
 
-Uma plataforma de produtividade moderna inspirada na experiência do Notion: workspaces, páginas, blocos, tarefas, arquivos e busca, com fundamentos 
-prontos para recursos de Inteligência Artificial.
+Uma plataforma de produtividade moderna inspirada na experiência do Notion: workspaces, páginas, blocos, bancos de dados, arquivos e busca, com fundamentos prontos para recursos de Inteligência Artificial.
 
-Desenvolvida incrementalmente, com foco em estabilidade, qualidade e
-escalabilidade.
+Desenvolvida incrementalmente, com foco em estabilidade, qualidade, experiência de usuário e escalabilidade. O produto atual já entrega um shell de aplicação com navegação contextual, dashboard compacto, editor rico e fluxo de trabalho de banco de dados com edição de célula estável.
 
 ---
 
@@ -23,6 +21,13 @@ escalabilidade.
 | Cache         | Redis                                                             |
 | Autenticação  | JWT Access + Refresh Token (com revogação via Redis)             |
 | Containerização | Docker, Docker Compose                                         |
+
+## Destaques da interface atual
+
+- Header contextual com identificação do workspace ativo e perfil autenticado exibido de forma consistente no shell principal.
+- Dashboard de workspaces com grade mais compacta e responsiva, voltada para aproveitar melhor a largura de tela.
+- Fluxo de edição de células em bancos de dados com commit por blur/Enter, evitando perda de foco e resets de cursor durante a digitação.
+- Shell global com busca por comando (Ctrl/Cmd + K), notificações e acesso rápido ao perfil.
 
 ## Funcionalidades de Segurança e Qualidade
 
@@ -203,28 +208,29 @@ inexistente. Um aviso é logado no startup indicando o modo degradado.
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# DATABASE_URL é opcional: sem ele, usa SQLite (backend/koda.db) automaticamente
-export DATABASE_URL=postgresql://koda:koda@localhost:5432/koda
-export REDIS_URL=redis://localhost:6379/0
-export SECRET_KEY=dev-secret
-export JWT_SECRET_KEY=dev-jwt-secret
-export FLASK_ENV=development
-export LOG_FORMAT=text
-export RATE_LIMIT_LOGIN=5 per minute
-export RATE_LIMIT_REGISTER=3 per hour
-flask db upgrade
-flask --app app:app run
+gunicorn -c gunicorn.conf.py app:app 
 ```
-
 ### 3. Frontend
 ```bash
 cd frontend
 npm install
-npm run dev
 ```
 
 - Backend: http://localhost:5000
 - Frontend (Vite): http://localhost:5173
+
+## Validação do frontend
+
+A build do frontend foi verificada com o comando abaixo após os refinamentos da UI:
+
+```bash
+cd frontend && npm run build
+```
+
+Resultado observado no ambiente atual:
+
+- `✓ 297 modules transformed`
+- `✓ built in 3.01s`
 
 ## Testes
 

@@ -1,3 +1,5 @@
+import { memo, useCallback, useEffect, useState } from "react";
+
 import { DatabaseItem, DatabaseProperty } from "@/types";
 
 export function getItemValue(
@@ -39,11 +41,27 @@ export interface CellEditorProps {
   compact?: boolean;
 }
 
-export function CellEditor({ prop, value, onChange, disabled, compact }: CellEditorProps) {
+const CellEditorInner = ({ prop, value, onChange, disabled, compact }: CellEditorProps) => {
   const isSelect = prop.type === "select" || prop.type === "status";
   const inputClass = compact
     ? "w-full rounded-lg border border-transparent bg-transparent px-2.5 py-1.5 text-sm outline-none transition-all duration-150 hover:border-[var(--koda-border-strong)] focus:border-brand-500/60 focus:bg-[var(--koda-surface)] focus:shadow-soft-sm dark:hover:border-[var(--koda-border-strong)]"
     : "input";
+
+  const [draft, setDraft] = useState<string>(value === null || value === undefined ? "" : String(value));
+
+  useEffect(() => {
+    setDraft(value === null || value === undefined ? "" : String(value));
+  }, [value]);
+
+  const commit = useCallback(() => {
+    const normalized =
+      prop.type === "number"
+        ? draft === "" ? null : Number(draft)
+        : draft === "" ? null : draft;
+
+    if (normalized === value) return;
+    onChange(normalized);
+  }, [draft, onChange, prop.type, value]);
 
   if (isSelect) {
     return (
@@ -60,35 +78,64 @@ export function CellEditor({ prop, value, onChange, disabled, compact }: CellEdi
       </select>
     );
   }
+
   if (prop.type === "date") {
     return (
       <input
         type="date"
         className={inputClass}
         value={toDateInput(value)}
-        onChange={(e) => onChange(e.target.value || null)}
+        onChange={(e) => setDraft(e.target.value || "")}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+            e.currentTarget.blur();
+          }
+        }}
         disabled={disabled}
       />
     );
   }
+
   if (prop.type === "number") {
     return (
       <input
         type="number"
         className={inputClass}
-        value={value === null || value === undefined ? "" : String(value)}
-        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+            e.currentTarget.blur();
+          }
+        }}
         disabled={disabled}
       />
     );
   }
+
   return (
     <input
       className={inputClass}
-      value={(value as string) || ""}
-      onChange={(e) => onChange(e.target.value || null)}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+          e.currentTarget.blur();
+        }
+      }}
       disabled={disabled}
       placeholder={compact ? "…" : "Digite…"}
     />
   );
-}
+};
+
+export const CellEditor = memo(CellEditorInner);

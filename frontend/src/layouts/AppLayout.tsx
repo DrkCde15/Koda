@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { workspaceService } from "@/services/auth";
+import { authService, workspaceService } from "@/services/auth";
 import { pageService } from "@/services/pages";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
@@ -71,7 +71,7 @@ function timeAgo(dateStr?: string): string {
 }
 
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout, setUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const dialog = useDialog();
@@ -84,6 +84,19 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const notifRef = useRef<HTMLDivElement | null>(null);
 
   useRealtimeNotifications();
+
+  const { data: meData } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.me(),
+    enabled: isAuthenticated && !user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (meData) {
+      setUser(meData);
+    }
+  }, [meData, setUser]);
 
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
@@ -112,8 +125,11 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     enabled: !!pathPageId && pathWorkspaceId === null,
   });
 
-  const activeWorkspaceId =
-    pathWorkspaceId ?? sidebarPage?.workspace_id ?? workspaces[0]?.id ?? null;
+  const activeWorkspaceId = useMemo(() => {
+    if (pathWorkspaceId) return pathWorkspaceId;
+    if (pathPageId && sidebarPage?.workspace_id) return sidebarPage.workspace_id;
+    return null;
+  }, [pathWorkspaceId, pathPageId, sidebarPage?.workspace_id]);
 
   const createPage = useMutation({
     mutationFn: (opts: { workspaceId: number; title: string; icon?: string }) =>
@@ -203,8 +219,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  const firstName = user?.full_name?.split(" ")[0] ?? "usuário";
-  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+  const userDisplayName = user?.full_name?.trim() || user?.email?.split("@")[0] || "usuário";
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
 
   return (
     <div className="bg-app flex h-screen text-[var(--koda-text)]">
@@ -224,17 +240,15 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             >
               <Icon name="grid" />
             </button>
-            <div className="hidden min-w-0 items-center gap-2 text-sm md:flex">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-gradient text-sm text-white shadow-glow-brand">
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  firstName.charAt(0).toUpperCase()
+                  userDisplayName.charAt(0).toUpperCase()
                 )}
               </span>
-              <span className="truncate font-medium text-[var(--koda-text-muted)]">
-                Olá, <span className="font-semibold text-[var(--koda-text)]">{firstName}</span>
-              </span>
+              <span className="truncate font-semibold text-[var(--koda-text)]">{userDisplayName}</span>
               {activeWs && (
                 <>
                   <span className="mx-1 h-4 w-px bg-[var(--koda-border)]" />

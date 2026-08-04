@@ -24,7 +24,7 @@ function WorkspaceCard({ id, name, icon, onOpen }: { id: number; name: string; i
     <button
       type="button"
       onClick={onOpen}
-      className="card card-hover group relative flex flex-col overflow-hidden p-6 text-left"
+      className="card card-hover group relative flex h-full w-full min-w-0 flex-col overflow-hidden p-4 text-left"
     >
       <span
         aria-hidden
@@ -32,7 +32,7 @@ function WorkspaceCard({ id, name, icon, onOpen }: { id: number; name: string; i
         style={{ background: "radial-gradient(circle, rgb(93 91 239 / 0.18), transparent 65%)" }}
       />
       <div className="relative flex items-start justify-between">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-500/15 bg-brand-gradient-soft text-2xl transition-transform duration-300 group-hover:scale-105">
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-brand-500/15 bg-brand-gradient-soft text-xl transition-transform duration-300 group-hover:scale-105">
           {icon || "📁"}
         </span>
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--koda-surface-2)] text-[var(--koda-text-faint)] opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1">
@@ -40,19 +40,19 @@ function WorkspaceCard({ id, name, icon, onOpen }: { id: number; name: string; i
         </span>
       </div>
 
-      <h3 className="relative mt-4 truncate text-lg font-semibold tracking-tight text-[var(--koda-text)]">
+      <h3 className="relative mt-3 truncate text-base font-semibold tracking-tight text-[var(--koda-text)]">
         {name}
       </h3>
-      <p className="relative mt-0.5 font-mono text-[11px] text-[var(--koda-text-faint)]">
+      <p className="relative mt-0.5 font-mono text-[10px] text-[var(--koda-text-faint)]">
         /{name.toLowerCase().replace(/\s+/g, "-").slice(0, 18)}
       </p>
 
-      <div className="relative mt-5 flex items-center gap-2 text-xs text-[var(--koda-text-muted)]">
-        <span className="chip !px-2.5 !py-1">
+      <div className="relative mt-4 flex items-center gap-2 text-xs text-[var(--koda-text-muted)]">
+        <span className="chip !px-2 !py-0.5">
           <Icon name="page" className="h-3 w-3" />
           <AnimatedNumber value={pages.length} />
         </span>
-        <span className="chip !px-2.5 !py-1">
+        <span className="chip !px-2 !py-0.5">
           <Icon name="star" className="h-3 w-3" />
           <AnimatedNumber value={favorites.length} />
         </span>
@@ -106,7 +106,7 @@ export function DashboardPage() {
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 lg:px-12">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10">
       {/* ---------- Hero ---------- */}
       <Reveal className="relative">
         <div className="relative flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end">
@@ -232,9 +232,9 @@ export function DashboardPage() {
       </Reveal>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="card p-6">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="card p-5">
               <Skeleton className="h-12 w-12" />
               <Skeleton className="mt-4 h-5 w-2/3" />
               <Skeleton className="mt-2 h-3 w-1/2" />
@@ -255,7 +255,7 @@ export function DashboardPage() {
           </div>
         </Reveal>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {workspaces.map((ws, i) => (
             <Reveal key={ws.id} delay={i * 60}>
               <WorkspaceCard

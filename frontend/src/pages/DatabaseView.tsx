@@ -179,6 +179,14 @@ export default function DatabaseView() {
     }
   }
 
+  function commitCellValue(item: DatabaseItem, prop: DatabaseProperty, value: string | number | null) {
+    if (value === null || value === undefined || value === "") {
+      const currentValue = getItemValue(item, prop.id);
+      if (currentValue === null || currentValue === undefined || currentValue === "") return;
+    }
+    saveCell(item, prop, value);
+  }
+
   async function addItem(values: Array<{ property_id: number; value: string | number | null }> = [], position?: number) {
     setBusy(true);
     try {
@@ -745,7 +753,7 @@ export default function DatabaseView() {
                           <CellEditor
                             prop={prop}
                             value={getItemValue(item, prop.id)}
-                            onChange={(v) => saveCell(item, prop, v)}
+                            onChange={(v) => commitCellValue(item, prop, v)}
                             disabled={busy}
                             compact
                           />
