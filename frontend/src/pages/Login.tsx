@@ -41,12 +41,13 @@ export function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <label className="field-muted mb-2 block">Email</label>
+          <label htmlFor="email" className="field-muted mb-2 block">Email</label>
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[var(--koda-text-faint)]">
               <Icon name="users" className="h-4 w-4" />
             </span>
             <input
+              id="email"
               className="input pl-10"
               type="email"
               placeholder="voce@empresa.com"
@@ -58,7 +59,7 @@ export function LoginPage() {
         </div>
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="field-muted">Senha</label>
+            <label htmlFor="password" className="field-muted">Senha</label>
             <Link
               to="/forgot-password"
               className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-300"
@@ -66,7 +67,7 @@ export function LoginPage() {
               Esqueceu a senha?
             </Link>
           </div>
-          <PasswordInput {...register("password", { required: true })} />
+          <PasswordInput id="password" {...register("password", { required: true })} />
         </div>
 
         <button className="btn-primary h-12 w-full text-[15px]" type="submit">

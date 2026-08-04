@@ -24,4 +24,4 @@ echo "Applying database migrations..."
 flask db upgrade
 
 echo "Starting Gunicorn..."
-exec gunicorn --workers 4 --bind 0.0.0.0:5000 app:app
+exec gunicorn -c gunicorn.conf.py app:app

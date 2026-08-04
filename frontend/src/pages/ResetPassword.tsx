@@ -43,8 +43,8 @@ export function ResetPasswordPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <label className="field-muted mb-2 block">Nova senha</label>
-          <PasswordInput {...register("new_password", { required: true, minLength: 8 })} />
+          <label htmlFor="new_password" className="field-muted mb-2 block">Nova senha</label>
+          <PasswordInput id="new_password" {...register("new_password", { required: true, minLength: 8 })} />
           <p className="mt-1.5 text-xs text-[var(--koda-text-faint)]">Mínimo de 8 caracteres.</p>
         </div>
         <button className="btn-primary h-12 w-full text-[15px]" type="submit" disabled={!token}>

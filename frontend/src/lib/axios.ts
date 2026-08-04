@@ -31,7 +31,15 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_KEY);
 }
 
+const isRefreshCall = (url?: string) => url?.endsWith("/auth/refresh");
+
 api.interceptors.request.use((config) => {
+  // The refresh endpoint reads the token from the Authorization header
+  // (JWT_TOKEN_LOCATION = ["headers"]) and expects a *refresh* token there.
+  // The refresh request sets its own header, so skip the access-token injection.
+  if (isRefreshCall(config.url)) {
+    return config;
+  }
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -45,16 +53,25 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config;
-    if (error.response?.status === 401 && original && !original.headers["_retry"]) {
+    // Never retry the refresh call itself: a failed refresh must reject so the
+    // catch below clears the tokens and sends the user to the login page.
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !isRefreshCall(original.url) &&
+      !original.headers["_retry"]
+    ) {
       original.headers["_retry"] = "1";
       const refresh = localStorage.getItem(REFRESH_KEY);
       if (refresh) {
         try {
           if (!refreshing) {
             refreshing = api
-              .post<ApiResponse<{ access_token: string }>>("/auth/refresh", {
-                refresh_token: refresh,
-              })
+              .post<ApiResponse<{ access_token: string }>>(
+                "/auth/refresh",
+                {},
+                { headers: { Authorization: `Bearer ${refresh}` } },
+              )
               .then((res) => {
                 const token = res.data.data?.access_token as string;
                 localStorage.setItem(TOKEN_KEY, token);

@@ -37,8 +37,12 @@ def init_limiter(app):
     """Initialize the limiter for this blueprint."""
     global limiter
     import extensions
-    if extensions.redis_client and not app.config.get("RATELIMIT_STORAGE_URI"):
-        app.config["RATELIMIT_STORAGE_URI"] = os.getenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/1")
+    if not app.config.get("RATELIMIT_STORAGE_URI"):
+        app.config["RATELIMIT_STORAGE_URI"] = (
+            os.getenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/1")
+            if extensions.redis_client
+            else "memory://"
+        )
     limiter.init_app(app)
 
 

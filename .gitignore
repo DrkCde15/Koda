@@ -18,6 +18,8 @@ build/
 *.pyc
 koda.db
 koda_test.db
+koda.db-shm*
+koda.db-wal*
 
 # Flask
 .instance/

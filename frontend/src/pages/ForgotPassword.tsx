@@ -51,12 +51,12 @@ export function ForgotPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="field-muted mb-2 block">Email</label>
+            <label htmlFor="email" className="field-muted mb-2 block">Email</label>
             <div className="relative">
               <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[var(--koda-text-faint)]">
                 <Icon name="mail" className="h-4 w-4" />
               </span>
-              <input className="input pl-10" type="email" autoFocus {...register("email", { required: true })} />
+              <input id="email" className="input pl-10" type="email" autoFocus {...register("email", { required: true })} />
             </div>
           </div>
           <button className="btn-primary h-12 w-full text-[15px]" type="submit">

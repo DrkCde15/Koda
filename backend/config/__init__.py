@@ -5,6 +5,7 @@ defaults but MUST be overridden via environment variables in production.
 """
 import os
 from datetime import timedelta
+from functools import lru_cache
 
 # Absolute path to the backend directory so SQLite falls back to a stable file
 # regardless of the current working directory.
@@ -86,6 +87,8 @@ config_map = {
 }
 
 
+@lru_cache(maxsize=None)
 def get_config(name: str = None):
+    """Return the config class for ``name`` (cached: config is fixed per process)."""
     name = name or os.getenv("FLASK_ENV", "development")
     return config_map.get(name, DevelopmentConfig)

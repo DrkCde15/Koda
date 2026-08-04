@@ -48,8 +48,9 @@ export function RegisterPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <label className="field-muted mb-2 block">Nome</label>
+          <label htmlFor="full_name" className="field-muted mb-2 block">Nome</label>
           <input
+            id="full_name"
             className="input"
             placeholder="Seu nome"
             autoComplete="name"
@@ -58,12 +59,13 @@ export function RegisterPage() {
           />
         </div>
         <div>
-          <label className="field-muted mb-2 block">Email</label>
+          <label htmlFor="email" className="field-muted mb-2 block">Email</label>
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[var(--koda-text-faint)]">
               <Icon name="users" className="h-4 w-4" />
             </span>
             <input
+              id="email"
               className="input pl-10"
               type="email"
               placeholder="voce@empresa.com"
@@ -73,8 +75,8 @@ export function RegisterPage() {
           </div>
         </div>
         <div>
-          <label className="field-muted mb-2 block">Senha</label>
-          <PasswordInput {...register("password", { required: true, minLength: 8 })} />
+          <label htmlFor="password" className="field-muted mb-2 block">Senha</label>
+          <PasswordInput id="password" {...register("password", { required: true, minLength: 8 })} />
           <p className="mt-1.5 text-xs text-[var(--koda-text-faint)]">Mínimo de 8 caracteres.</p>
         </div>
 

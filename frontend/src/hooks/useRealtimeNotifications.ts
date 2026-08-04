@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/contexts/ToastContext";
+import { clearTokens } from "@/lib/axios";
 import { NotificationItem } from "@/types";
 
 const STREAM_URL = "/api/notifications/stream";
@@ -33,9 +34,6 @@ export function useRealtimeNotifications(): void {
   const toast = useToast();
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return;
-
     let cancelled = false;
     let controller: AbortController | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -48,12 +46,22 @@ export function useRealtimeNotifications(): void {
 
     const connect = async (attempt: number) => {
       if (cancelled) return;
+      // Read the token on every attempt so a fresh token issued by the axios
+      // refresh interceptor is picked up instead of reusing a stale one.
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+
       controller = new AbortController();
       try {
         const res = await fetch(STREAM_URL, {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
+        if (res.status === 401) {
+          clearTokens();
+          window.location.assign("/login");
+          return;
+        }
         if (!res.ok || !res.body) throw new Error(`stream status ${res.status}`);
 
         const reader = res.body.getReader();
